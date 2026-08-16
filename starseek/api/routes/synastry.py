@@ -7,15 +7,16 @@ from starseek.config import Settings
 from starseek.models.chart import SynastryReport
 from starseek.core.synastry import calculate_synastry
 from starseek.services.storage import (
-    load_chart, save_synastry, load_synastry, list_synastries, delete_synastry,
+    load_chart, resolve_chart,
+    save_synastry, load_synastry, list_synastries, delete_synastry,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["synastry"])
 
 
 class SynastryRequest(BaseModel):
-    chart_a_id: int = Field(..., description="ID of the first saved chart")
-    chart_b_id: int = Field(..., description="ID of the second saved chart")
+    chart_a: str = Field(..., description="ID or name of the first saved chart")
+    chart_b: str = Field(..., description="ID or name of the second saved chart")
     include_minor_aspects: bool = Field(False, description="Include minor aspects")
     save: bool = Field(True, description="Save the synastry report to database")
 
@@ -31,13 +32,13 @@ def create_synastry(
     settings: Settings = Depends(get_settings),
     db_path: str = Depends(get_db_path),
 ):
-    chart_a = load_chart(db_path, body.chart_a_id)
+    chart_a = resolve_chart(db_path, body.chart_a)
     if chart_a is None:
-        raise HTTPException(status_code=404, detail=f"Chart {body.chart_a_id} not found")
+        raise HTTPException(status_code=404, detail=f"Chart '{body.chart_a}' not found")
 
-    chart_b = load_chart(db_path, body.chart_b_id)
+    chart_b = resolve_chart(db_path, body.chart_b)
     if chart_b is None:
-        raise HTTPException(status_code=404, detail=f"Chart {body.chart_b_id} not found")
+        raise HTTPException(status_code=404, detail=f"Chart '{body.chart_b}' not found")
 
     report = calculate_synastry(
         chart_a, chart_b, include_minor_aspects=body.include_minor_aspects

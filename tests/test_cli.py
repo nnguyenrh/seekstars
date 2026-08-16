@@ -180,6 +180,50 @@ class TestShowCommand:
         result = runner.invoke(cli, ["show", "9999"])
         assert result.exit_code != 0
 
+    def test_show_by_name(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, ["show", "Test Person"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["name"] == "Test Person"
+
+    def test_show_by_name_nonexistent(self, runner, db_path):
+        result = runner.invoke(cli, ["show", "Nobody"])
+        assert result.exit_code != 0
+
+
+class TestNameOverwrite:
+    def test_save_duplicate_name_prompt_yes(self, runner, db_path):
+        runner.invoke(cli, [
+            "chart-manual", "--name", "Duplicate",
+            "--datetime", "2000-01-01T00:00:00",
+            "--lat", "0.0", "--lng", "0.0", "--tz", "UTC",
+            "--save",
+        ])
+        result = runner.invoke(cli, [
+            "chart-manual", "--name", "Duplicate",
+            "--datetime", "1990-06-15T12:00:00",
+            "--lat", "51.5", "--lng", "-0.1", "--tz", "Europe/London",
+            "--save",
+        ], input="y\n")
+        assert result.exit_code == 0
+        assert "updated" in result.output
+
+    def test_save_duplicate_name_prompt_no(self, runner, db_path):
+        runner.invoke(cli, [
+            "chart-manual", "--name", "NoDup",
+            "--datetime", "2000-01-01T00:00:00",
+            "--lat", "0.0", "--lng", "0.0", "--tz", "UTC",
+            "--save",
+        ])
+        result = runner.invoke(cli, [
+            "chart-manual", "--name", "NoDup",
+            "--datetime", "1990-06-15T12:00:00",
+            "--lat", "51.5", "--lng", "-0.1", "--tz", "Europe/London",
+            "--save",
+        ], input="n\n")
+        assert result.exit_code == 0
+        assert "Cancelled" in result.output
+
 
 class TestDeleteCommand:
     def test_delete_with_confirm(self, runner, db_path, sample_chart_in_db):
@@ -250,6 +294,17 @@ class TestTransitsCommand:
         assert result.exit_code != 0
         assert "not found" in result.output
 
+    def test_transits_by_name(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "transits", "Test Person",
+            "--date", "2026-06-15",
+            "--time", "12:00",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["transit_positions"]) == 14
+
 
 class TestSynastryCommand:
     def test_synastry_json(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
@@ -281,6 +336,14 @@ class TestSynastryCommand:
         result = runner.invoke(cli, ["synastry", str(sample_chart_in_db), "9999", "--quiet"])
         assert result.exit_code != 0
         assert "not found" in result.output
+
+    def test_synastry_by_name(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        result = runner.invoke(cli, [
+            "synastry", "Test Person", "Second Person", "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "inter_aspects" in data
 
     def test_synastry_save(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
         result = runner.invoke(cli, [

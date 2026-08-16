@@ -6,6 +6,7 @@ from datetime import datetime
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
     save_synastry, load_synastry, list_synastries, delete_synastry,
+    resolve_chart, chart_name_exists, load_chart_by_name,
     cache_location, get_cached_location, ChartListItem, SynastryListItem,
 )
 from starseek.services.geocoding import GeocodingResult
@@ -89,7 +90,13 @@ class TestChartCRUD:
 
     def test_list_charts(self, db_path, sample_chart):
         save_chart(db_path, sample_chart)
-        save_chart(db_path, sample_chart)
+        chart2 = build_chart(BirthData(
+            name="Another Person",
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        save_chart(db_path, chart2)
 
         items, total = list_charts(db_path)
         assert total == 2
@@ -105,9 +112,15 @@ class TestChartCRUD:
         items, total = list_charts(db_path, name_filter="Nonexistent")
         assert total == 0
 
-    def test_list_pagination(self, db_path, sample_chart):
-        for _ in range(5):
-            save_chart(db_path, sample_chart)
+    def test_list_pagination(self, db_path):
+        for i in range(5):
+            chart = build_chart(BirthData(
+                name=f"Chart {i}",
+                birth_datetime=datetime(2000, 1, 1, i, 0, 0),
+                latitude=0.0, longitude=0.0, timezone="UTC",
+                house_system=HouseSystem.PLACIDUS,
+            ))
+            save_chart(db_path, chart)
 
         items, total = list_charts(db_path, limit=2, offset=0)
         assert total == 5
@@ -123,6 +136,73 @@ class TestChartCRUD:
 
     def test_delete_nonexistent(self, db_path):
         assert delete_chart(db_path, 9999) is False
+
+
+class TestChartNameLookup:
+    def test_load_by_name(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        loaded = load_chart_by_name(db_path, "Test Person")
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_load_by_name_nonexistent(self, db_path):
+        assert load_chart_by_name(db_path, "Nobody") is None
+
+    def test_resolve_by_id(self, db_path, sample_chart):
+        chart_id = save_chart(db_path, sample_chart)
+        loaded = resolve_chart(db_path, str(chart_id))
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_resolve_by_name(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        loaded = resolve_chart(db_path, "Test Person")
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_resolve_nonexistent(self, db_path):
+        assert resolve_chart(db_path, "9999") is None
+        assert resolve_chart(db_path, "Nobody") is None
+
+    def test_chart_name_exists(self, db_path, sample_chart):
+        chart_id = save_chart(db_path, sample_chart)
+        assert chart_name_exists(db_path, "Test Person") == chart_id
+        assert chart_name_exists(db_path, "Nobody") is None
+
+    def test_unique_name_constraint(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        import sqlite3
+        with pytest.raises(sqlite3.IntegrityError):
+            save_chart(db_path, sample_chart)
+
+    def test_overwrite_by_name(self, db_path, sample_chart):
+        original_id = save_chart(db_path, sample_chart)
+        chart2 = build_chart(BirthData(
+            name="Test Person",
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=51.5, longitude=-0.1, timezone="Europe/London",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        updated_id = save_chart(db_path, chart2, overwrite=True)
+        assert updated_id == original_id
+
+        loaded = load_chart(db_path, updated_id)
+        assert loaded.birth_location != "0.0000, 0.0000"
+
+    def test_unnamed_charts_no_conflict(self, db_path):
+        unnamed1 = build_chart(BirthData(
+            birth_datetime=datetime(2000, 1, 1, 0, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        unnamed2 = build_chart(BirthData(
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        id1 = save_chart(db_path, unnamed1)
+        id2 = save_chart(db_path, unnamed2)
+        assert id1 != id2
 
 
 class TestLocationCache:

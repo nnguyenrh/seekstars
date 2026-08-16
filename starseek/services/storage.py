@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS locations_cache (
 
 CREATE INDEX IF NOT EXISTS idx_locations_query ON locations_cache(city_query);
 CREATE INDEX IF NOT EXISTS idx_charts_name ON charts(name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_charts_name_unique ON charts(name) WHERE name IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_charts_user_id ON charts(user_id);
 
 CREATE TABLE IF NOT EXISTS synastry_reports (
@@ -105,11 +106,35 @@ def _get_admin_id(conn: sqlite3.Connection) -> int:
     return row["id"]
 
 
-def save_chart(db_path: str, chart: BirthChart) -> int:
+def save_chart(db_path: str, chart: BirthChart, overwrite: bool = False) -> int:
     conn = _get_connection(db_path)
     try:
         user_id = _get_admin_id(conn)
         chart_json = chart.model_dump_json()
+
+        if overwrite and chart.name:
+            existing = conn.execute(
+                "SELECT id FROM charts WHERE name = ?", (chart.name,)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    """UPDATE charts SET user_id=?, birth_datetime=?, birth_location=?,
+                       latitude=?, longitude=?, timezone=?, house_system=?, chart_data=?
+                       WHERE id=?""",
+                    (
+                        user_id,
+                        chart.birth_datetime.isoformat(),
+                        chart.birth_location,
+                        chart.latitude,
+                        chart.longitude,
+                        chart.timezone,
+                        chart.house_system.value,
+                        chart_json,
+                        existing["id"],
+                    ),
+                )
+                conn.commit()
+                return existing["id"]
 
         cursor = conn.execute(
             """INSERT INTO charts (user_id, name, birth_datetime, birth_location,
@@ -148,6 +173,43 @@ def load_chart(db_path: str, chart_id: int) -> BirthChart | None:
         chart = BirthChart.model_validate_json(row["chart_data"])
         chart.id = row["id"]
         return chart
+    finally:
+        conn.close()
+
+
+def load_chart_by_name(db_path: str, name: str) -> BirthChart | None:
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, chart_data FROM charts WHERE name = ?",
+            (name,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        chart = BirthChart.model_validate_json(row["chart_data"])
+        chart.id = row["id"]
+        return chart
+    finally:
+        conn.close()
+
+
+def resolve_chart(db_path: str, ref: str) -> BirthChart | None:
+    try:
+        chart_id = int(ref)
+        return load_chart(db_path, chart_id)
+    except ValueError:
+        return load_chart_by_name(db_path, ref)
+
+
+def chart_name_exists(db_path: str, name: str) -> int | None:
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id FROM charts WHERE name = ?", (name,)
+        ).fetchone()
+        return row["id"] if row else None
     finally:
         conn.close()
 
