@@ -90,7 +90,7 @@ clean:  ## Remove build artifacts, caches, and compiled files
 reset-venv:  ## Destroy and recreate the virtualenv with all packages
 	rm -rf $(VENV)
 	python3.11 -m venv $(VENV)
-	$(PIP) install -e "./starseek-core[dev]"
+	$(PIP) install -e "./starseek-core[dev]" -e "./starseek-charts"
 
 # ── Help ─────────────────────────────────────────────────
 
