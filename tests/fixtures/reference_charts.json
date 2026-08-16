@@ -1,0 +1,1082 @@
+[
+  {
+    "label": "null_island",
+    "julian_day": 2451544.5,
+    "input": {
+      "year": 2000,
+      "month": 1,
+      "day": 1,
+      "hour_utc": 0.0,
+      "lat": 0.0,
+      "lng": 0.0
+    },
+    "planets": [
+      {
+        "name": "Sun",
+        "longitude": 279.859216,
+        "latitude": 0.000235,
+        "speed": 1.019381,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 9.8592
+      },
+      {
+        "name": "Moon",
+        "longitude": 217.293367,
+        "latitude": 5.231384,
+        "speed": 12.102997,
+        "is_retrograde": false,
+        "sign": "Scorpio",
+        "degree_in_sign": 7.2934
+      },
+      {
+        "name": "Mercury",
+        "longitude": 271.111805,
+        "latitude": -0.945686,
+        "speed": 1.553631,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 1.1118
+      },
+      {
+        "name": "Venus",
+        "longitude": 240.961421,
+        "latitude": 2.080228,
+        "speed": 1.208464,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 0.9614
+      },
+      {
+        "name": "Mars",
+        "longitude": 327.57548,
+        "latitude": -1.074014,
+        "speed": 0.775656,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 27.5755
+      },
+      {
+        "name": "Jupiter",
+        "longitude": 25.233072,
+        "latitude": -1.264763,
+        "speed": 0.03907,
+        "is_retrograde": false,
+        "sign": "Aries",
+        "degree_in_sign": 25.2331
+      },
+      {
+        "name": "Saturn",
+        "longitude": 40.40584,
+        "latitude": -2.447193,
+        "speed": -0.020858,
+        "is_retrograde": true,
+        "sign": "Taurus",
+        "degree_in_sign": 10.4058
+      },
+      {
+        "name": "Uranus",
+        "longitude": 314.784107,
+        "latitude": -0.658457,
+        "speed": 0.05012,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 14.7841
+      },
+      {
+        "name": "Neptune",
+        "longitude": 303.175223,
+        "latitude": 0.235106,
+        "speed": 0.035461,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 3.1752
+      },
+      {
+        "name": "Pluto",
+        "longitude": 251.437101,
+        "latitude": 10.854483,
+        "speed": 0.035276,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 11.4371
+      },
+      {
+        "name": "North Node",
+        "longitude": 123.978796,
+        "latitude": 0.0,
+        "speed": -0.04891,
+        "is_retrograde": true,
+        "sign": "Leo",
+        "degree_in_sign": 3.9788
+      },
+      {
+        "name": "Chiron",
+        "longitude": 251.560394,
+        "latitude": 4.068663,
+        "speed": 0.114623,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 11.5604
+      },
+      {
+        "name": "Black Moon Lilith",
+        "longitude": 263.40867,
+        "latitude": 3.425225,
+        "speed": 0.111325,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 23.4087
+      },
+      {
+        "name": "South Node",
+        "longitude": 303.978796,
+        "latitude": 0.0,
+        "speed": -0.04891,
+        "is_retrograde": true,
+        "sign": "Aquarius",
+        "degree_in_sign": 3.9788
+      }
+    ],
+    "house_cusps": [
+      {
+        "house": 1,
+        "longitude": 190.839913,
+        "sign": "Libra",
+        "degree_in_sign": 10.8399
+      },
+      {
+        "house": 2,
+        "longitude": 222.408526,
+        "sign": "Scorpio",
+        "degree_in_sign": 12.4085
+      },
+      {
+        "house": 3,
+        "longitude": 251.50034,
+        "sign": "Sagittarius",
+        "degree_in_sign": 11.5003
+      },
+      {
+        "house": 4,
+        "longitude": 279.156666,
+        "sign": "Capricorn",
+        "degree_in_sign": 9.1567
+      },
+      {
+        "house": 5,
+        "longitude": 307.556438,
+        "sign": "Aquarius",
+        "degree_in_sign": 7.5564
+      },
+      {
+        "house": 6,
+        "longitude": 338.32361,
+        "sign": "Pisces",
+        "degree_in_sign": 8.3236
+      },
+      {
+        "house": 7,
+        "longitude": 10.839913,
+        "sign": "Aries",
+        "degree_in_sign": 10.8399
+      },
+      {
+        "house": 8,
+        "longitude": 42.408526,
+        "sign": "Taurus",
+        "degree_in_sign": 12.4085
+      },
+      {
+        "house": 9,
+        "longitude": 71.50034,
+        "sign": "Gemini",
+        "degree_in_sign": 11.5003
+      },
+      {
+        "house": 10,
+        "longitude": 99.156666,
+        "sign": "Cancer",
+        "degree_in_sign": 9.1567
+      },
+      {
+        "house": 11,
+        "longitude": 127.556438,
+        "sign": "Leo",
+        "degree_in_sign": 7.5564
+      },
+      {
+        "house": 12,
+        "longitude": 158.32361,
+        "sign": "Virgo",
+        "degree_in_sign": 8.3236
+      }
+    ],
+    "ascendant": 190.839913,
+    "midheaven": 99.156666
+  },
+  {
+    "label": "princess_diana",
+    "julian_day": 2437482.28125,
+    "input": {
+      "year": 1961,
+      "month": 7,
+      "day": 1,
+      "hour_utc": 18.75,
+      "lat": 52.8306,
+      "lng": 0.5145
+    },
+    "planets": [
+      {
+        "name": "Sun",
+        "longitude": 99.663069,
+        "latitude": -1.7e-05,
+        "speed": 0.953122,
+        "is_retrograde": false,
+        "sign": "Cancer",
+        "degree_in_sign": 9.6631
+      },
+      {
+        "name": "Moon",
+        "longitude": 325.037772,
+        "latitude": 0.282535,
+        "speed": 14.700751,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 25.0378
+      },
+      {
+        "name": "Mercury",
+        "longitude": 93.201415,
+        "latitude": -4.713537,
+        "speed": -0.481729,
+        "is_retrograde": true,
+        "sign": "Cancer",
+        "degree_in_sign": 3.2014
+      },
+      {
+        "name": "Venus",
+        "longitude": 54.399863,
+        "latitude": -2.983643,
+        "speed": 1.023035,
+        "is_retrograde": false,
+        "sign": "Taurus",
+        "degree_in_sign": 24.3999
+      },
+      {
+        "name": "Mars",
+        "longitude": 151.645723,
+        "latitude": 1.106175,
+        "speed": 0.59119,
+        "is_retrograde": false,
+        "sign": "Virgo",
+        "degree_in_sign": 1.6457
+      },
+      {
+        "name": "Jupiter",
+        "longitude": 305.097076,
+        "latitude": -0.550347,
+        "speed": -0.104112,
+        "is_retrograde": true,
+        "sign": "Aquarius",
+        "degree_in_sign": 5.0971
+      },
+      {
+        "name": "Saturn",
+        "longitude": 297.814035,
+        "latitude": -0.128242,
+        "speed": -0.068073,
+        "is_retrograde": true,
+        "sign": "Capricorn",
+        "degree_in_sign": 27.814
+      },
+      {
+        "name": "Uranus",
+        "longitude": 143.335954,
+        "latitude": 0.705998,
+        "speed": 0.048966,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 23.336
+      },
+      {
+        "name": "Neptune",
+        "longitude": 218.63661,
+        "latitude": 1.803174,
+        "speed": -0.00983,
+        "is_retrograde": true,
+        "sign": "Scorpio",
+        "degree_in_sign": 8.6366
+      },
+      {
+        "name": "Pluto",
+        "longitude": 156.04422,
+        "latitude": 12.655124,
+        "speed": 0.021354,
+        "is_retrograde": false,
+        "sign": "Virgo",
+        "degree_in_sign": 6.0442
+      },
+      {
+        "name": "North Node",
+        "longitude": 148.174205,
+        "latitude": 0.0,
+        "speed": -0.005422,
+        "is_retrograde": true,
+        "sign": "Leo",
+        "degree_in_sign": 28.1742
+      },
+      {
+        "name": "Chiron",
+        "longitude": 336.467953,
+        "latitude": 5.905144,
+        "speed": -0.02039,
+        "is_retrograde": true,
+        "sign": "Pisces",
+        "degree_in_sign": 6.468
+      },
+      {
+        "name": "Black Moon Lilith",
+        "longitude": 136.763742,
+        "latitude": -1.156281,
+        "speed": 0.110812,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 16.7637
+      },
+      {
+        "name": "South Node",
+        "longitude": 328.174205,
+        "latitude": 0.0,
+        "speed": -0.005422,
+        "is_retrograde": true,
+        "sign": "Aquarius",
+        "degree_in_sign": 28.1742
+      }
+    ],
+    "house_cusps": [
+      {
+        "house": 1,
+        "longitude": 258.42322,
+        "sign": "Sagittarius",
+        "degree_in_sign": 18.4232
+      },
+      {
+        "house": 2,
+        "longitude": 299.825644,
+        "sign": "Capricorn",
+        "degree_in_sign": 29.8256
+      },
+      {
+        "house": 3,
+        "longitude": 348.375557,
+        "sign": "Pisces",
+        "degree_in_sign": 18.3756
+      },
+      {
+        "house": 4,
+        "longitude": 23.06752,
+        "sign": "Aries",
+        "degree_in_sign": 23.0675
+      },
+      {
+        "house": 5,
+        "longitude": 46.065979,
+        "sign": "Taurus",
+        "degree_in_sign": 16.066
+      },
+      {
+        "house": 6,
+        "longitude": 63.305729,
+        "sign": "Gemini",
+        "degree_in_sign": 3.3057
+      },
+      {
+        "house": 7,
+        "longitude": 78.42322,
+        "sign": "Gemini",
+        "degree_in_sign": 18.4232
+      },
+      {
+        "house": 8,
+        "longitude": 119.825644,
+        "sign": "Cancer",
+        "degree_in_sign": 29.8256
+      },
+      {
+        "house": 9,
+        "longitude": 168.375557,
+        "sign": "Virgo",
+        "degree_in_sign": 18.3756
+      },
+      {
+        "house": 10,
+        "longitude": 203.06752,
+        "sign": "Libra",
+        "degree_in_sign": 23.0675
+      },
+      {
+        "house": 11,
+        "longitude": 226.065979,
+        "sign": "Scorpio",
+        "degree_in_sign": 16.066
+      },
+      {
+        "house": 12,
+        "longitude": 243.305729,
+        "sign": "Sagittarius",
+        "degree_in_sign": 3.3057
+      }
+    ],
+    "ascendant": 258.42322,
+    "midheaven": 203.06752
+  },
+  {
+    "label": "midnight_boundary",
+    "julian_day": 2446431.1215291666,
+    "input": {
+      "year": 1985,
+      "month": 12,
+      "day": 31,
+      "hour_utc": 14.9167,
+      "lat": 35.6762,
+      "lng": 139.6503
+    },
+    "planets": [
+      {
+        "name": "Sun",
+        "longitude": 279.880447,
+        "latitude": 0.000145,
+        "speed": 1.019019,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 9.8804
+      },
+      {
+        "name": "Moon",
+        "longitude": 150.10529,
+        "latitude": 4.655315,
+        "speed": 13.088625,
+        "is_retrograde": false,
+        "sign": "Virgo",
+        "degree_in_sign": 0.1053
+      },
+      {
+        "name": "Mercury",
+        "longitude": 262.336565,
+        "latitude": 0.331904,
+        "speed": 1.434834,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 22.3366
+      },
+      {
+        "name": "Venus",
+        "longitude": 275.328342,
+        "latitude": -0.316891,
+        "speed": 1.258312,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 5.3283
+      },
+      {
+        "name": "Mars",
+        "longitude": 220.33949,
+        "latitude": 1.031064,
+        "speed": 0.611222,
+        "is_retrograde": false,
+        "sign": "Scorpio",
+        "degree_in_sign": 10.3395
+      },
+      {
+        "name": "Jupiter",
+        "longitude": 318.174031,
+        "latitude": -0.802445,
+        "speed": 0.212728,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 18.174
+      },
+      {
+        "name": "Saturn",
+        "longitude": 245.120382,
+        "latitude": 1.806128,
+        "speed": 0.104845,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 5.1204
+      },
+      {
+        "name": "Uranus",
+        "longitude": 259.478298,
+        "latitude": -0.057528,
+        "speed": 0.058203,
+        "is_retrograde": false,
+        "sign": "Sagittarius",
+        "degree_in_sign": 19.4783
+      },
+      {
+        "name": "Neptune",
+        "longitude": 273.572215,
+        "latitude": 1.062491,
+        "speed": 0.037687,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 3.5722
+      },
+      {
+        "name": "Pluto",
+        "longitude": 216.9038,
+        "latitude": 16.350482,
+        "speed": 0.022805,
+        "is_retrograde": false,
+        "sign": "Scorpio",
+        "degree_in_sign": 6.9038
+      },
+      {
+        "name": "North Node",
+        "longitude": 36.851112,
+        "latitude": 0.0,
+        "speed": -0.125866,
+        "is_retrograde": true,
+        "sign": "Taurus",
+        "degree_in_sign": 6.8511
+      },
+      {
+        "name": "Chiron",
+        "longitude": 70.445628,
+        "latitude": -5.073704,
+        "speed": -0.048591,
+        "is_retrograde": true,
+        "sign": "Gemini",
+        "degree_in_sign": 10.4456
+      },
+      {
+        "name": "Black Moon Lilith",
+        "longitude": 53.579231,
+        "latitude": 1.571465,
+        "speed": 0.110866,
+        "is_retrograde": false,
+        "sign": "Taurus",
+        "degree_in_sign": 23.5792
+      },
+      {
+        "name": "South Node",
+        "longitude": 216.851112,
+        "latitude": 0.0,
+        "speed": -0.125866,
+        "is_retrograde": true,
+        "sign": "Scorpio",
+        "degree_in_sign": 6.8511
+      }
+    ],
+    "house_cusps": [
+      {
+        "house": 1,
+        "longitude": 191.110667,
+        "sign": "Libra",
+        "degree_in_sign": 11.1107
+      },
+      {
+        "house": 2,
+        "longitude": 218.680997,
+        "sign": "Scorpio",
+        "degree_in_sign": 8.681
+      },
+      {
+        "house": 3,
+        "longitude": 249.468297,
+        "sign": "Sagittarius",
+        "degree_in_sign": 9.4683
+      },
+      {
+        "house": 4,
+        "longitude": 282.309044,
+        "sign": "Capricorn",
+        "degree_in_sign": 12.309
+      },
+      {
+        "house": 5,
+        "longitude": 314.965695,
+        "sign": "Aquarius",
+        "degree_in_sign": 14.9657
+      },
+      {
+        "house": 6,
+        "longitude": 345.027734,
+        "sign": "Pisces",
+        "degree_in_sign": 15.0277
+      },
+      {
+        "house": 7,
+        "longitude": 11.110667,
+        "sign": "Aries",
+        "degree_in_sign": 11.1107
+      },
+      {
+        "house": 8,
+        "longitude": 38.680997,
+        "sign": "Taurus",
+        "degree_in_sign": 8.681
+      },
+      {
+        "house": 9,
+        "longitude": 69.468297,
+        "sign": "Gemini",
+        "degree_in_sign": 9.4683
+      },
+      {
+        "house": 10,
+        "longitude": 102.309044,
+        "sign": "Cancer",
+        "degree_in_sign": 12.309
+      },
+      {
+        "house": 11,
+        "longitude": 134.965695,
+        "sign": "Leo",
+        "degree_in_sign": 14.9657
+      },
+      {
+        "house": 12,
+        "longitude": 165.027734,
+        "sign": "Virgo",
+        "degree_in_sign": 15.0277
+      }
+    ],
+    "ascendant": 191.110667,
+    "midheaven": 102.309044
+  },
+  {
+    "label": "date_shift_west",
+    "julian_day": 2448696.8958333335,
+    "input": {
+      "year": 1992,
+      "month": 3,
+      "day": 15,
+      "hour_utc": 9.5,
+      "lat": 34.0522,
+      "lng": -118.2437
+    },
+    "planets": [
+      {
+        "name": "Sun",
+        "longitude": 355.057228,
+        "latitude": -0.000174,
+        "speed": 0.995835,
+        "is_retrograde": false,
+        "sign": "Pisces",
+        "degree_in_sign": 25.0572
+      },
+      {
+        "name": "Moon",
+        "longitude": 128.618397,
+        "latitude": -2.684105,
+        "speed": 14.67044,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 8.6184
+      },
+      {
+        "name": "Mercury",
+        "longitude": 11.125783,
+        "latitude": 3.018968,
+        "speed": 0.229519,
+        "is_retrograde": false,
+        "sign": "Aries",
+        "degree_in_sign": 11.1258
+      },
+      {
+        "name": "Venus",
+        "longitude": 331.726244,
+        "latitude": -1.091809,
+        "speed": 1.23462,
+        "is_retrograde": false,
+        "sign": "Pisces",
+        "degree_in_sign": 1.7262
+      },
+      {
+        "name": "Mars",
+        "longitude": 320.171901,
+        "latitude": -1.138602,
+        "speed": 0.773377,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 20.1719
+      },
+      {
+        "name": "Jupiter",
+        "longitude": 157.719971,
+        "latitude": 1.379642,
+        "speed": -0.12017,
+        "is_retrograde": true,
+        "sign": "Virgo",
+        "degree_in_sign": 7.72
+      },
+      {
+        "name": "Saturn",
+        "longitude": 314.385503,
+        "latitude": -0.679597,
+        "speed": 0.10024,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 14.3855
+      },
+      {
+        "name": "Uranus",
+        "longitude": 287.425004,
+        "latitude": -0.387517,
+        "speed": 0.030876,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 17.425
+      },
+      {
+        "name": "Neptune",
+        "longitude": 288.602391,
+        "latitude": 0.734331,
+        "speed": 0.019374,
+        "is_retrograde": false,
+        "sign": "Capricorn",
+        "degree_in_sign": 18.6024
+      },
+      {
+        "name": "Pluto",
+        "longitude": 232.846141,
+        "latitude": 15.083581,
+        "speed": -0.011079,
+        "is_retrograde": true,
+        "sign": "Scorpio",
+        "degree_in_sign": 22.8461
+      },
+      {
+        "name": "North Node",
+        "longitude": 276.481829,
+        "latitude": 0.0,
+        "speed": -0.074401,
+        "is_retrograde": true,
+        "sign": "Capricorn",
+        "degree_in_sign": 6.4818
+      },
+      {
+        "name": "Chiron",
+        "longitude": 123.619631,
+        "latitude": -7.329952,
+        "speed": -0.032418,
+        "is_retrograde": true,
+        "sign": "Leo",
+        "degree_in_sign": 3.6196
+      },
+      {
+        "name": "Black Moon Lilith",
+        "longitude": 305.968862,
+        "latitude": 2.585796,
+        "speed": 0.11107,
+        "is_retrograde": false,
+        "sign": "Aquarius",
+        "degree_in_sign": 5.9689
+      },
+      {
+        "name": "South Node",
+        "longitude": 96.481829,
+        "latitude": 0.0,
+        "speed": -0.074401,
+        "is_retrograde": true,
+        "sign": "Cancer",
+        "degree_in_sign": 6.4818
+      }
+    ],
+    "house_cusps": [
+      {
+        "house": 1,
+        "longitude": 270.418507,
+        "sign": "Capricorn",
+        "degree_in_sign": 0.4185
+      },
+      {
+        "house": 2,
+        "longitude": 306.296753,
+        "sign": "Aquarius",
+        "degree_in_sign": 6.2968
+      },
+      {
+        "house": 3,
+        "longitude": 344.963558,
+        "sign": "Pisces",
+        "degree_in_sign": 14.9636
+      },
+      {
+        "house": 4,
+        "longitude": 18.960534,
+        "sign": "Aries",
+        "degree_in_sign": 18.9605
+      },
+      {
+        "house": 5,
+        "longitude": 46.07501,
+        "sign": "Taurus",
+        "degree_in_sign": 16.075
+      },
+      {
+        "house": 6,
+        "longitude": 68.776504,
+        "sign": "Gemini",
+        "degree_in_sign": 8.7765
+      },
+      {
+        "house": 7,
+        "longitude": 90.418507,
+        "sign": "Cancer",
+        "degree_in_sign": 0.4185
+      },
+      {
+        "house": 8,
+        "longitude": 126.296753,
+        "sign": "Leo",
+        "degree_in_sign": 6.2968
+      },
+      {
+        "house": 9,
+        "longitude": 164.963558,
+        "sign": "Virgo",
+        "degree_in_sign": 14.9636
+      },
+      {
+        "house": 10,
+        "longitude": 198.960534,
+        "sign": "Libra",
+        "degree_in_sign": 18.9605
+      },
+      {
+        "house": 11,
+        "longitude": 226.07501,
+        "sign": "Scorpio",
+        "degree_in_sign": 16.075
+      },
+      {
+        "house": 12,
+        "longitude": 248.776504,
+        "sign": "Sagittarius",
+        "degree_in_sign": 8.7765
+      }
+    ],
+    "ascendant": 270.418507,
+    "midheaven": 198.960534
+  },
+  {
+    "label": "retrograde_heavy",
+    "julian_day": 2460148.0,
+    "input": {
+      "year": 2023,
+      "month": 7,
+      "day": 22,
+      "hour_utc": 12.0,
+      "lat": 51.5074,
+      "lng": -0.1278
+    },
+    "planets": [
+      {
+        "name": "Sun",
+        "longitude": 119.449319,
+        "latitude": 0.000172,
+        "speed": 0.954827,
+        "is_retrograde": false,
+        "sign": "Cancer",
+        "degree_in_sign": 29.4493
+      },
+      {
+        "name": "Moon",
+        "longitude": 171.110961,
+        "latitude": 3.098837,
+        "speed": 11.879983,
+        "is_retrograde": false,
+        "sign": "Virgo",
+        "degree_in_sign": 21.111
+      },
+      {
+        "name": "Mercury",
+        "longitude": 140.303212,
+        "latitude": 1.189626,
+        "speed": 1.6162,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 20.3032
+      },
+      {
+        "name": "Venus",
+        "longitude": 148.597084,
+        "latitude": -3.362574,
+        "speed": 0.021723,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 28.5971
+      },
+      {
+        "name": "Mars",
+        "longitude": 157.352962,
+        "latitude": 1.007084,
+        "speed": 0.616062,
+        "is_retrograde": false,
+        "sign": "Virgo",
+        "degree_in_sign": 7.353
+      },
+      {
+        "name": "Jupiter",
+        "longitude": 42.564136,
+        "latitude": -1.189998,
+        "speed": 0.129347,
+        "is_retrograde": false,
+        "sign": "Taurus",
+        "degree_in_sign": 12.5641
+      },
+      {
+        "name": "Saturn",
+        "longitude": 336.259799,
+        "latitude": -1.703429,
+        "speed": -0.052253,
+        "is_retrograde": true,
+        "sign": "Pisces",
+        "degree_in_sign": 6.2598
+      },
+      {
+        "name": "Uranus",
+        "longitude": 52.497681,
+        "latitude": -0.312723,
+        "speed": 0.029868,
+        "is_retrograde": false,
+        "sign": "Taurus",
+        "degree_in_sign": 22.4977
+      },
+      {
+        "name": "Neptune",
+        "longitude": 357.562766,
+        "latitude": -1.24808,
+        "speed": -0.011329,
+        "is_retrograde": true,
+        "sign": "Pisces",
+        "degree_in_sign": 27.5628
+      },
+      {
+        "name": "Pluto",
+        "longitude": 299.117898,
+        "latitude": -2.685251,
+        "speed": -0.023831,
+        "is_retrograde": true,
+        "sign": "Capricorn",
+        "degree_in_sign": 29.1179
+      },
+      {
+        "name": "North Node",
+        "longitude": 29.153235,
+        "latitude": 0.0,
+        "speed": -0.087428,
+        "is_retrograde": true,
+        "sign": "Aries",
+        "degree_in_sign": 29.1532
+      },
+      {
+        "name": "Chiron",
+        "longitude": 19.962887,
+        "latitude": 1.548856,
+        "speed": 0.000901,
+        "is_retrograde": false,
+        "sign": "Aries",
+        "degree_in_sign": 19.9629
+      },
+      {
+        "name": "Black Moon Lilith",
+        "longitude": 141.836507,
+        "latitude": 4.760539,
+        "speed": 0.111855,
+        "is_retrograde": false,
+        "sign": "Leo",
+        "degree_in_sign": 21.8365
+      },
+      {
+        "name": "South Node",
+        "longitude": 209.153235,
+        "latitude": 0.0,
+        "speed": -0.087428,
+        "is_retrograde": true,
+        "sign": "Libra",
+        "degree_in_sign": 29.1532
+      }
+    ],
+    "house_cusps": [
+      {
+        "house": 1,
+        "longitude": 201.01374,
+        "sign": "Libra",
+        "degree_in_sign": 21.0137
+      },
+      {
+        "house": 2,
+        "longitude": 227.260584,
+        "sign": "Scorpio",
+        "degree_in_sign": 17.2606
+      },
+      {
+        "house": 3,
+        "longitude": 259.950556,
+        "sign": "Sagittarius",
+        "degree_in_sign": 19.9506
+      },
+      {
+        "house": 4,
+        "longitude": 297.772494,
+        "sign": "Capricorn",
+        "degree_in_sign": 27.7725
+      },
+      {
+        "house": 5,
+        "longitude": 332.423236,
+        "sign": "Pisces",
+        "degree_in_sign": 2.4232
+      },
+      {
+        "house": 6,
+        "longitude": 359.884313,
+        "sign": "Pisces",
+        "degree_in_sign": 29.8843
+      },
+      {
+        "house": 7,
+        "longitude": 21.01374,
+        "sign": "Aries",
+        "degree_in_sign": 21.0137
+      },
+      {
+        "house": 8,
+        "longitude": 47.260584,
+        "sign": "Taurus",
+        "degree_in_sign": 17.2606
+      },
+      {
+        "house": 9,
+        "longitude": 79.950556,
+        "sign": "Gemini",
+        "degree_in_sign": 19.9506
+      },
+      {
+        "house": 10,
+        "longitude": 117.772494,
+        "sign": "Cancer",
+        "degree_in_sign": 27.7725
+      },
+      {
+        "house": 11,
+        "longitude": 152.423236,
+        "sign": "Virgo",
+        "degree_in_sign": 2.4232
+      },
+      {
+        "house": 12,
+        "longitude": 179.884313,
+        "sign": "Virgo",
+        "degree_in_sign": 29.8843
+      }
+    ],
+    "ascendant": 201.01374,
+    "midheaven": 117.772494
+  }
+]
