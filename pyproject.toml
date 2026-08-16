@@ -3,19 +3,10 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "starseek"
+name = "starseek-workspace"
 version = "0.3.0"
-description = "Astrological birth chart generator"
+description = "StarSeek monorepo - install all packages for development"
 requires-python = ">=3.11,<3.12"
-dependencies = [
-    "pyswisseph==2.10.3.2",
-    "pydantic>=2.0,<3.0",
-    "python-dotenv>=1.0",
-    "click>=8.0",
-    "httpx>=0.24",
-    "fastapi>=0.100",
-    "uvicorn>=0.23",
-]
 
 [project.optional-dependencies]
 dev = [
@@ -24,9 +15,3 @@ dev = [
     "ruff>=0.1",
     "respx>=0.20",
 ]
-
-[project.scripts]
-starseek = "starseek.cli.main:cli"
-
-[tool.setuptools.packages.find]
-include = ["starseek*"]

@@ -15,6 +15,9 @@ build/
 # Database (user data, not code)
 *.db
 
+# Rendered charts
+charts/
+
 # IDE
 .vscode/
 .idea/

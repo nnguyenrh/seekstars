@@ -86,6 +86,20 @@ def _resolve_chart_ref(db_path: str, ref: str) -> "BirthChart | None":
     return chart
 
 
+_CHARTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "charts")
+
+
+def _svg_output_path(name: str, chart_type: str = "natal") -> str:
+    charts_dir = os.path.abspath(_CHARTS_DIR)
+    os.makedirs(charts_dir, exist_ok=True)
+    safe_name = name.replace(" ", "_").replace("/", "_") if name else "chart"
+    if chart_type != "natal":
+        filename = f"{safe_name}_{chart_type}.svg"
+    else:
+        filename = f"{safe_name}.svg"
+    return os.path.join(charts_dir, filename)
+
+
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -272,10 +286,13 @@ def list_cmd(ctx, name, limit, offset):
 
 @cli.command()
 @click.argument("chart_ref")
-@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown", "svg"], case_sensitive=False),
               default="json", help="Output format.")
+@click.option("--output", "-o", "output_file", default=None, help="Save output to file (required for SVG).")
+@click.option("--theme", default="classic",
+              help="SVG theme (classic, dark, light, dark-high-contrast, strawberry, black-and-white).")
 @click.pass_context
-def show(ctx, chart_ref, fmt):
+def show(ctx, chart_ref, fmt, output_file, theme):
     """Show a saved chart by ID or name."""
     settings = ctx.obj["settings"]
     init_db(settings.db_path, admin_password=settings.admin_password)
@@ -285,10 +302,70 @@ def show(ctx, chart_ref, fmt):
         click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
         sys.exit(1)
 
-    if fmt == "markdown":
+    if fmt == "svg":
+        try:
+            from starseek_charts.svg import render_natal_svg
+        except ImportError:
+            click.echo("Error: starseek-charts is not installed. Run: pip install -e ./starseek-charts", err=True)
+            sys.exit(1)
+        svg = render_natal_svg(result, theme=theme)
+        if not output_file:
+            output_file = _svg_output_path(result.name or chart_ref)
+        with open(output_file, "w") as f:
+            f.write(svg)
+        click.echo(f"SVG saved to {output_file}", err=True)
+    elif fmt == "markdown":
         click.echo(to_markdown(result))
     else:
         click.echo(to_json(result))
+
+
+@cli.command()
+@click.argument("chart_ref")
+@click.argument("chart_ref_b", required=False, default=None)
+@click.option("--type", "-t", "chart_type", type=click.Choice(["natal", "synastry", "transit"], case_sensitive=False),
+              default=None, help="Chart type (auto-detected if second chart provided).")
+@click.option("--output", "-o", "output_file", default=None, help="Output file path (default: stdout).")
+@click.option("--theme", default="classic",
+              help="SVG theme (classic, dark, light, dark-high-contrast, strawberry, black-and-white).")
+@click.pass_context
+def render(ctx, chart_ref, chart_ref_b, chart_type, output_file, theme):
+    """Render a chart wheel as SVG."""
+    try:
+        from starseek_charts.svg import render_svg
+    except ImportError:
+        click.echo("Error: starseek-charts is not installed. Run: pip install -e ./starseek-charts", err=True)
+        sys.exit(1)
+
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    chart_a = resolve_chart(settings.db_path, chart_ref)
+    if chart_a is None:
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
+        sys.exit(1)
+
+    chart_b = None
+    if chart_ref_b:
+        chart_b = resolve_chart(settings.db_path, chart_ref_b)
+        if chart_b is None:
+            click.echo(f"Error: Chart '{chart_ref_b}' not found.", err=True)
+            sys.exit(1)
+
+    if chart_type is None:
+        chart_type = "synastry" if chart_b else "natal"
+
+    svg = render_svg(chart_a, chart_b, chart_type=chart_type, theme=theme)
+
+    if not output_file:
+        name = chart_a.name or chart_ref
+        if chart_b and chart_type == "synastry":
+            name = f"{chart_a.name or chart_ref}_{chart_b.name or chart_ref_b}"
+        output_file = _svg_output_path(name, chart_type)
+
+    with open(output_file, "w") as f:
+        f.write(svg)
+    click.echo(f"SVG saved to {output_file}", err=True)
 
 
 @cli.command()

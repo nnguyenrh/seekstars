@@ -1,4 +1,4 @@
-# StarSeek Makefile
+# StarSeek Makefile (Monorepo)
 # Run 'make help' to see available targets.
 
 .DEFAULT_GOAL := help
@@ -11,30 +11,27 @@ PIP          := $(VENV)/bin/pip
 PYTEST       := $(VENV)/bin/pytest
 RUFF         := $(VENV)/bin/ruff
 UVICORN      := $(VENV)/bin/uvicorn
-CLI          := $(PYTHON) -m starseek
+CLI          := $(VENV)/bin/starseek
 HOST         ?= 0.0.0.0
 PORT         ?= 8000
-DB_PATH      ?= starseek.db
 
 # ── Guards ───────────────────────────────────────────────
 
 .PHONY: _check-venv
 _check-venv:
-	@test -d $(VENV) || (echo "Error: Virtual environment not found. Run ./setup.sh first." && exit 1)
+	@test -d $(VENV) || (echo "Error: Virtual environment not found. Run 'make reset-venv' first." && exit 1)
 
 # ── Development ──────────────────────────────────────────
 
 .PHONY: install
-install: _check-venv  ## Install/update production dependencies
-	$(PIP) install -r requirements.txt
+install: _check-venv  ## Install all packages in editable mode
+	$(PIP) install -e "./starseek-core[dev]"
+	$(PIP) install -e "./starseek-charts[dev]"
+	$(PIP) install -e "./starseek-ui[dev]"
 
-.PHONY: install-dev
-install-dev: _check-venv  ## Install/update dev + production dependencies
-	$(PIP) install -r requirements.txt -r requirements-dev.txt
-
-.PHONY: update
-update: _check-venv  ## Update all dependencies to latest compatible versions
-	$(PIP) install --upgrade -r requirements.txt -r requirements-dev.txt
+.PHONY: install-core
+install-core: _check-venv  ## Install only starseek-core (lightweight, no rendering)
+	$(PIP) install -e "./starseek-core[dev]"
 
 # ── Running ──────────────────────────────────────────────
 
@@ -43,32 +40,38 @@ run: _check-venv  ## Start the API server (default: 0.0.0.0:8000)
 	$(UVICORN) starseek.api.app:app --host $(HOST) --port $(PORT) --reload
 
 .PHONY: chart
-chart: _check-venv  ## Generate a chart via CLI. Usage: make chart ARGS="--datetime '...' --city '...'"
+chart: _check-venv  ## Generate a chart via CLI. Usage: make chart ARGS="--date '...' --city '...'"
 	$(CLI) chart $(ARGS)
 
 # ── Testing ──────────────────────────────────────────────
 
 .PHONY: test
-test: _check-venv  ## Run all tests
-	$(PYTEST) tests/ -v
+test: _check-venv  ## Run all tests across all packages
+	$(PYTEST) starseek-core/tests/ -v
+	@if [ -d starseek-charts/tests ] && [ "$$(ls -A starseek-charts/tests/*.py 2>/dev/null)" ]; then \
+		$(PYTEST) starseek-charts/tests/ -v; \
+	fi
+	@if [ -d starseek-ui/tests ] && [ "$$(ls -A starseek-ui/tests/*.py 2>/dev/null)" ]; then \
+		$(PYTEST) starseek-ui/tests/ -v; \
+	fi
 
-.PHONY: test-unit
-test-unit: _check-venv  ## Run unit tests only (fast)
-	$(PYTEST) tests/ -v -m "not integration"
+.PHONY: test-core
+test-core: _check-venv  ## Run starseek-core tests only
+	$(PYTEST) starseek-core/tests/ -v
 
 .PHONY: test-cov
-test-cov: _check-venv  ## Run tests with coverage report
-	$(PYTEST) tests/ --cov=starseek --cov-report=term-missing --cov-report=html
+test-cov: _check-venv  ## Run core tests with coverage report
+	$(PYTEST) starseek-core/tests/ --cov=starseek --cov-report=term-missing --cov-report=html
 
 # ── Code Quality ─────────────────────────────────────────
 
 .PHONY: lint
 lint: _check-venv  ## Run linter (ruff)
-	$(RUFF) check starseek/ tests/
+	$(RUFF) check starseek-core/starseek/ starseek-core/tests/
 
 .PHONY: format
 format: _check-venv  ## Auto-format code (ruff)
-	$(RUFF) format starseek/ tests/
+	$(RUFF) format starseek-core/starseek/ starseek-core/tests/
 
 .PHONY: check
 check: lint test  ## Run linter + all tests (pre-commit quality gate)
@@ -77,26 +80,25 @@ check: lint test  ## Run linter + all tests (pre-commit quality gate)
 
 .PHONY: clean
 clean:  ## Remove build artifacts, caches, and compiled files
-	rm -rf __pycache__ starseek/__pycache__ tests/__pycache__
 	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov
 	rm -rf *.egg-info dist build
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+	find . -name '*.egg-info' -type d -exec rm -rf {} + 2>/dev/null || true
 
 .PHONY: reset-venv
-reset-venv:  ## Destroy and recreate the virtualenv with all dependencies
+reset-venv:  ## Destroy and recreate the virtualenv with all packages
 	rm -rf $(VENV)
 	python3.11 -m venv $(VENV)
-	$(PIP) install -e ".[dev]"
+	$(PIP) install -e "./starseek-core[dev]" -e "./starseek-charts"
 
 # ── Help ─────────────────────────────────────────────────
 
 .PHONY: help
 help:  ## Show this help message
-	@echo "StarSeek - Birth Chart Generator"
+	@echo "StarSeek - Astrological Birth Chart Generator (Monorepo)"
 	@echo ""
-	@echo "First-time setup:  ./setup.sh"
-	@echo "                   ./setup.sh --dev  (include dev dependencies)"
+	@echo "Quick start:  make reset-venv && make test"
 	@echo ""
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
