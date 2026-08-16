@@ -74,6 +74,7 @@ def build_chart(
             ))
 
         aspects = find_aspects(raw_positions, include_minor=include_minor_aspects)
+        aspects.sort(key=lambda a: a.orb)
 
         sun_pos = next(p for p in raw_positions if p.planet == Planet.SUN)
         sect = determine_sect(sun_pos.longitude, raw_cusps.ascendant)

@@ -96,6 +96,7 @@ def calculate_transits(
         transit_aspects = find_cross_aspects(
             transit_raw, natal_raw, include_minor=include_minor_aspects
         )
+        transit_aspects.sort(key=lambda a: a.orb)
 
         transit_positions = []
         for pos in transit_raw:
