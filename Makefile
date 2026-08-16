@@ -83,6 +83,12 @@ clean:  ## Remove build artifacts, caches, and compiled files
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
+.PHONY: reset-venv
+reset-venv:  ## Destroy and recreate the virtualenv with all dependencies
+	rm -rf $(VENV)
+	python3.11 -m venv $(VENV)
+	$(PIP) install -e ".[dev]"
+
 # ── Help ─────────────────────────────────────────────────
 
 .PHONY: help
