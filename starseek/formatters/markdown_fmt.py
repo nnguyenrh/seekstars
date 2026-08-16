@@ -77,13 +77,13 @@ def transit_to_markdown(report: TransitReport) -> str:
 
     lines.append("## Current Planetary Positions")
     lines.append("")
-    lines.append("| Planet | Sign | Degree | Rx |")
-    lines.append("|--------|------|--------|----|")
+    lines.append("| Planet | Sign | Degree | Natal House | Rx |")
+    lines.append("|--------|------|--------|-------------|----|")
     for p in report.transit_positions:
         rx = "R" if p.is_retrograde else ""
         deg = int(p.sign_degree)
         minute = p.sign_minute
-        lines.append(f"| {p.planet.value} | {p.sign.value} | {deg}\u00b0{minute:02d}' | {rx} |")
+        lines.append(f"| {p.planet.value} | {p.sign.value} | {deg}\u00b0{minute:02d}' | {p.natal_house} | {rx} |")
     lines.append("")
 
     lines.append("## Transit-to-Natal Aspects")

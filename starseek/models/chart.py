@@ -73,6 +73,7 @@ class TransitPosition(BaseModel):
     sign: Sign = Field(..., description="Zodiac sign the planet occupies")
     sign_degree: float = Field(..., description="Degree within the sign (0-30)")
     sign_minute: int = Field(..., description="Arc-minute within the degree (0-59)")
+    natal_house: int = Field(..., ge=1, le=12, description="Natal house the transiting planet falls in")
 
 
 class TransitAspect(BaseModel):

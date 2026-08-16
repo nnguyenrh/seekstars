@@ -8,6 +8,7 @@ from starseek.core.ephemeris import (
     init_ephemeris, close_ephemeris, datetime_to_jd,
     calculate_planet, RawPosition,
 )
+from starseek.core.houses import assign_house
 from starseek.core.aspects import (
     ASPECT_ANGLES, MAJOR_ASPECTS, ASPECT_EXCLUDED,
     angular_distance, _get_orb, _is_applying,
@@ -99,6 +100,7 @@ def calculate_transits(
         transit_positions = []
         for pos in transit_raw:
             deg = pos.degree_in_sign
+            natal_house = assign_house(pos.longitude, natal_chart.houses)
             transit_positions.append(TransitPosition(
                 planet=pos.planet,
                 longitude=round(pos.longitude, 6),
@@ -108,6 +110,7 @@ def calculate_transits(
                 sign=pos.sign,
                 sign_degree=round(deg, 4),
                 sign_minute=int((deg % 1) * 60),
+                natal_house=natal_house,
             ))
 
         return TransitReport(

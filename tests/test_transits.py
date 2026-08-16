@@ -98,6 +98,12 @@ class TestTransitCalculation:
         assert sun.sign in (Sign.PISCES, Sign.ARIES)
         assert 355.0 <= sun.longitude <= 5.0 or 355.0 <= sun.longitude < 360.0 or 0.0 <= sun.longitude <= 5.0
 
+    def test_transit_positions_have_natal_house(self, null_island_chart, known_transit_dt):
+        report = calculate_transits(null_island_chart, transit_dt=known_transit_dt)
+
+        for pos in report.transit_positions:
+            assert 1 <= pos.natal_house <= 12
+
 
 class TestCrossAspects:
     def test_conjunction_detection(self):
@@ -207,7 +213,7 @@ class TestTransitFormatters:
         assert "# Transits for Null Island" in md
         assert "## Current Planetary Positions" in md
         assert "## Transit-to-Natal Aspects" in md
-        assert "| Planet | Sign | Degree | Rx |" in md
+        assert "| Planet | Sign | Degree | Natal House | Rx |" in md
         assert "Sun" in md
 
     def test_transit_markdown_without_name(self, null_island_chart, known_transit_dt):
