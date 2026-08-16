@@ -1,10 +1,11 @@
+import os
 import sys
 from datetime import datetime
 from typing import Optional
 
 import click
 
-from starseek.config import get_settings
+from starseek.config import get_settings, reset_settings
 from starseek.models.enums import HouseSystem
 from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
@@ -20,6 +21,61 @@ from starseek.services.geocoding import (
 )
 
 
+def _parse_birth_datetime(date_str: str, time_str: str) -> datetime:
+    try:
+        return datetime.fromisoformat(f"{date_str}T{time_str}:00")
+    except ValueError:
+        raise click.BadParameter(
+            f"Invalid date '{date_str}' or time '{time_str}'. "
+            "Use YYYY-MM-DD for date and HH:MM (24-hour) for time."
+        )
+
+
+def _ensure_geonames_username(settings) -> str:
+    if settings.geonames_username:
+        return settings.geonames_username
+
+    username = click.prompt(
+        "GeoNames username not configured.\n"
+        "Register free at https://www.geonames.org/login\n"
+        "Enter your GeoNames username",
+        err=True,
+    )
+
+    if not username:
+        click.echo("Error: GeoNames username is required for city lookup.", err=True)
+        sys.exit(1)
+
+    click.echo(f"Saving username to .env for future use...", err=True)
+    _save_geonames_to_env(username)
+
+    settings.geonames_username = username
+    return username
+
+
+def _save_geonames_to_env(username: str) -> None:
+    from pathlib import Path
+    from starseek.config import _PROJECT_ROOT
+
+    env_path = _PROJECT_ROOT / ".env"
+
+    if env_path.exists():
+        content = env_path.read_text()
+        if "GEONAMES_USERNAME=" in content:
+            lines = content.splitlines()
+            new_lines = []
+            for line in lines:
+                if line.strip().startswith("GEONAMES_USERNAME=") or line.strip().startswith("# GEONAMES_USERNAME="):
+                    new_lines.append(f"GEONAMES_USERNAME={username}")
+                else:
+                    new_lines.append(line)
+            env_path.write_text("\n".join(new_lines) + "\n")
+            return
+
+    with open(env_path, "a") as f:
+        f.write(f"\nGEONAMES_USERNAME={username}\n")
+
+
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -30,11 +86,9 @@ def cli(ctx):
 
 @cli.command()
 @click.option("--name", "-n", default=None, help="Name of the person.")
-@click.option("--datetime", "dt", required=True, help="Birth date/time (ISO 8601, e.g. '1990-06-15T14:30:00').")
-@click.option("--city", "-c", default=None, help="City of birth (triggers geocoding).")
-@click.option("--lat", type=float, default=None, help="Birth latitude.")
-@click.option("--lng", type=float, default=None, help="Birth longitude.")
-@click.option("--tz", default=None, help="IANA timezone (e.g. 'America/New_York').")
+@click.option("--date", "-d", "date_str", required=True, help="Birth date (YYYY-MM-DD).")
+@click.option("--time", "-t", "time_str", required=True, help="Birth time in 24-hour format (HH:MM).")
+@click.option("--city", "-c", required=True, help="City of birth (e.g. 'New York, NY, US').")
 @click.option("--houses", type=click.Choice(["placidus", "whole-sign"], case_sensitive=False),
               default=None, help="House system (default from config).")
 @click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
@@ -42,17 +96,12 @@ def cli(ctx):
 @click.option("--save/--no-save", default=False, help="Save chart to database.")
 @click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
 @click.pass_context
-def chart(ctx, name, dt, city, lat, lng, tz, houses, fmt, save, quiet):
-    """Generate a birth chart."""
+def chart(ctx, name, date_str, time_str, city, houses, fmt, save, quiet):
+    """Generate a birth chart from a city and birth date/time."""
     settings = ctx.obj["settings"]
 
-    try:
-        birth_dt = datetime.fromisoformat(dt)
-    except ValueError:
-        click.echo(f"Error: Invalid datetime format '{dt}'. Use ISO 8601 (e.g. 1990-06-15T14:30:00).", err=True)
-        sys.exit(1)
+    birth_dt = _parse_birth_datetime(date_str, time_str)
 
-    settings = ctx.obj["settings"]
     if houses is None:
         house_system = settings.default_house_system
     elif houses == "whole-sign":
@@ -60,24 +109,72 @@ def chart(ctx, name, dt, city, lat, lng, tz, houses, fmt, save, quiet):
     else:
         house_system = HouseSystem.PLACIDUS
 
-    if city:
-        resolved = _resolve_city(city, settings.db_path, settings.geonames_username, quiet)
-        if resolved is None:
-            sys.exit(1)
-        lat = resolved.latitude
-        lng = resolved.longitude
-        tz = resolved.timezone
-        location_name = resolved.city_name
-    elif lat is not None and lng is not None and tz is not None:
-        location_name = None
-    else:
-        click.echo("Error: Provide either --city or (--lat, --lng, --tz).", err=True)
+    username = _ensure_geonames_username(settings)
+    resolved = _resolve_city(city, settings.db_path, username, quiet)
+    if resolved is None:
         sys.exit(1)
 
     birth_data = BirthData(
         name=name,
         birth_datetime=birth_dt,
-        city=location_name if city else None,
+        city=resolved.city_name,
+        latitude=resolved.latitude,
+        longitude=resolved.longitude,
+        timezone=resolved.timezone,
+        house_system=house_system,
+    )
+
+    try:
+        result = build_chart(birth_data, ephe_path=settings.ephe_path)
+    except Exception as e:
+        click.echo(f"Error generating chart: {e}", err=True)
+        sys.exit(1)
+
+    if save:
+        init_db(settings.db_path, admin_password=settings.admin_password)
+        chart_id = save_chart(settings.db_path, result)
+        if not quiet:
+            click.echo(f"Chart saved with ID {chart_id}.", err=True)
+
+    if fmt == "markdown":
+        click.echo(to_markdown(result))
+    else:
+        click.echo(to_json(result))
+
+
+@cli.command("chart-manual")
+@click.option("--name", "-n", default=None, help="Name of the person.")
+@click.option("--datetime", "dt", required=True, help="Birth date/time (ISO 8601).")
+@click.option("--lat", type=float, required=True, help="Birth latitude.")
+@click.option("--lng", type=float, required=True, help="Birth longitude.")
+@click.option("--tz", required=True, help="IANA timezone (e.g. 'America/New_York').")
+@click.option("--houses", type=click.Choice(["placidus", "whole-sign"], case_sensitive=False),
+              default=None, help="House system (default from config).")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--save/--no-save", default=False, help="Save chart to database.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def chart_manual(ctx, name, dt, lat, lng, tz, houses, fmt, save, quiet):
+    """Generate a birth chart from manual coordinates (advanced)."""
+    settings = ctx.obj["settings"]
+
+    try:
+        birth_dt = datetime.fromisoformat(dt)
+    except ValueError:
+        click.echo(f"Error: Invalid datetime format '{dt}'.", err=True)
+        sys.exit(1)
+
+    if houses is None:
+        house_system = settings.default_house_system
+    elif houses == "whole-sign":
+        house_system = HouseSystem.WHOLE_SIGN
+    else:
+        house_system = HouseSystem.PLACIDUS
+
+    birth_data = BirthData(
+        name=name,
+        birth_datetime=birth_dt,
         latitude=lat,
         longitude=lng,
         timezone=tz,
@@ -185,12 +282,10 @@ def geocode(ctx, city, max_rows):
     """Look up coordinates and timezone for a city."""
     settings = ctx.obj["settings"]
 
-    if not settings.geonames_username:
-        click.echo("Error: GEONAMES_USERNAME not configured. Set it in .env.", err=True)
-        sys.exit(1)
+    username = _ensure_geonames_username(settings)
 
     try:
-        results = search_city(city, settings.geonames_username, max_rows=max_rows)
+        results = search_city(city, username, max_rows=max_rows)
     except GeocodingError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
@@ -211,14 +306,6 @@ def _resolve_city(city, db_path, username, quiet):
         if not quiet:
             click.echo(f"Using cached location: {cached.city_name}", err=True)
         return cached
-
-    if not username:
-        click.echo(
-            "Error: GEONAMES_USERNAME not configured and city not in cache. "
-            "Set it in .env or use --lat/--lng/--tz.",
-            err=True,
-        )
-        return None
 
     try:
         result = geocode_city(city, username)

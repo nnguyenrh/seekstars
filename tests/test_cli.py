@@ -30,6 +30,7 @@ def runner():
 def db_path(tmp_path):
     path = str(tmp_path / "test.db")
     os.environ["STARSEEK_DB_PATH"] = path
+    os.environ["GEONAMES_USERNAME"] = "nhing"
     init_db(path)
     return path
 
@@ -50,52 +51,39 @@ def sample_chart_in_db(db_path):
 
 
 class TestChartCommand:
-    def test_chart_with_coordinates(self, runner, tmp_path):
-        db_path = str(tmp_path / "chart_test.db")
-        os.environ["STARSEEK_DB_PATH"] = db_path
-
+    def test_chart_with_city(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "2000-01-01T00:00:00",
-            "--lat", "0.0",
-            "--lng", "0.0",
-            "--tz", "UTC",
+            "--date", "2000-01-01",
+            "--time", "00:00",
+            "--city", "New York",
+            "--quiet",
         ])
-
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "planets" in data
         assert len(data["planets"]) == 14
 
-    def test_chart_markdown_format(self, runner, tmp_path):
-        db_path = str(tmp_path / "md_test.db")
-        os.environ["STARSEEK_DB_PATH"] = db_path
-
+    def test_chart_markdown_format(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "2000-01-01T00:00:00",
-            "--lat", "0.0",
-            "--lng", "0.0",
-            "--tz", "UTC",
+            "--date", "2000-01-01",
+            "--time", "00:00",
+            "--city", "New York",
             "--format", "markdown",
         ])
-
         assert result.exit_code == 0
         assert "## Planetary Positions" in result.output
 
-    def test_chart_whole_sign(self, runner, tmp_path):
-        db_path = str(tmp_path / "ws_test.db")
-        os.environ["STARSEEK_DB_PATH"] = db_path
-
+    def test_chart_whole_sign(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "2000-01-01T00:00:00",
-            "--lat", "0.0",
-            "--lng", "0.0",
-            "--tz", "UTC",
+            "--date", "2000-01-01",
+            "--time", "00:00",
+            "--city", "New York",
             "--houses", "whole-sign",
+            "--quiet",
         ])
-
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["house_system"] == "Whole Sign"
@@ -103,34 +91,45 @@ class TestChartCommand:
     def test_chart_save(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "2000-01-01T00:00:00",
-            "--lat", "0.0",
-            "--lng", "0.0",
-            "--tz", "UTC",
+            "--date", "2000-01-01",
+            "--time", "00:00",
+            "--city", "New York",
             "--save",
             "--name", "Saved Chart",
         ])
-
         assert result.exit_code == 0
 
-    def test_chart_missing_location(self, runner):
+    def test_chart_invalid_date(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "2000-01-01T00:00:00",
+            "--date", "not-a-date",
+            "--time", "12:00",
+            "--city", "New York",
         ])
-
         assert result.exit_code != 0
 
-    def test_chart_invalid_datetime(self, runner):
+    def test_chart_invalid_time(self, runner, db_path):
         result = runner.invoke(cli, [
             "chart",
-            "--datetime", "not-a-date",
+            "--date", "2000-01-01",
+            "--time", "99:99",
+            "--city", "New York",
+        ])
+        assert result.exit_code != 0
+
+
+class TestChartManualCommand:
+    def test_chart_manual(self, runner, db_path):
+        result = runner.invoke(cli, [
+            "chart-manual",
+            "--datetime", "2000-01-01T00:00:00",
             "--lat", "0.0",
             "--lng", "0.0",
             "--tz", "UTC",
         ])
-
-        assert result.exit_code != 0
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["planets"]) == 14
 
 
 class TestListCommand:
