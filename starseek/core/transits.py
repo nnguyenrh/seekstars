@@ -116,6 +116,7 @@ def calculate_transits(
         return TransitReport(
             natal_chart_id=natal_chart.id,
             natal_name=natal_chart.name,
+            natal_sect=natal_chart.sect,
             transit_datetime=transit_dt,
             transit_positions=transit_positions,
             transit_aspects=transit_aspects,

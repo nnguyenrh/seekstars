@@ -61,6 +61,35 @@ def to_markdown(chart: BirthChart) -> str:
             lines.append(f"- {st['sign']}: {planets_str}")
 
     lines.append("")
+
+    if chart.sect:
+        lines.append("## Traditional Analysis")
+        lines.append("")
+        lines.append(f"**Sect:** {chart.sect.capitalize()}")
+        lines.append("")
+
+        sect_planets = [p for p in chart.planets if p.sect_status and p.sect_status != "neutral"]
+        if sect_planets:
+            lines.append("**Sect Status:**")
+            for p in sect_planets:
+                lines.append(f"- {p.planet.value}: {p.sect_status.replace('_', ' ')}")
+            lines.append("")
+
+        conditioned = [p for p in chart.planets if p.condition]
+        if conditioned:
+            lines.append("**Planetary Condition:**")
+            for p in conditioned:
+                for note in p.condition:
+                    lines.append(f"- {p.planet.value}: {note}")
+            lines.append("")
+
+        if s.domicile_lord_chains:
+            lines.append("**Domicile Lord Chains:**")
+            for chain_info in s.domicile_lord_chains:
+                chain_str = " \u2192 ".join(chain_info["chain"])
+                lines.append(f"- {chain_str}")
+            lines.append("")
+
     return "\n".join(lines)
 
 

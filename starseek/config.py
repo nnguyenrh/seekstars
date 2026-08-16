@@ -17,7 +17,7 @@ class Settings:
     port: int = 8000
     db_path: str = str(_PROJECT_ROOT / "starseek.db")
     ephe_path: str = str(_PROJECT_ROOT / "data" / "ephe")
-    default_house_system: HouseSystem = HouseSystem.PLACIDUS
+    default_house_system: HouseSystem = HouseSystem.WHOLE_SIGN
     log_level: str = "INFO"
     admin_password: str = "admin"
 
@@ -42,11 +42,11 @@ def load_settings(env_file: str | None = None) -> Settings:
         if default_env.exists():
             load_dotenv(default_env)
 
-    house_str = os.getenv("STARSEEK_DEFAULT_HOUSE_SYSTEM", "Placidus")
+    house_str = os.getenv("STARSEEK_DEFAULT_HOUSE_SYSTEM", "Whole Sign")
     try:
         house_system = HouseSystem(house_str)
     except ValueError:
-        house_system = HouseSystem.PLACIDUS
+        house_system = HouseSystem.WHOLE_SIGN
 
     return Settings(
         geonames_username=os.getenv("GEONAMES_USERNAME", ""),
