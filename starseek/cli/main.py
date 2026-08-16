@@ -36,7 +36,7 @@ def cli(ctx):
 @click.option("--lng", type=float, default=None, help="Birth longitude.")
 @click.option("--tz", default=None, help="IANA timezone (e.g. 'America/New_York').")
 @click.option("--houses", type=click.Choice(["placidus", "whole-sign"], case_sensitive=False),
-              default="placidus", help="House system.")
+              default=None, help="House system (default from config).")
 @click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
               default="json", help="Output format.")
 @click.option("--save/--no-save", default=False, help="Save chart to database.")
@@ -52,7 +52,13 @@ def chart(ctx, name, dt, city, lat, lng, tz, houses, fmt, save, quiet):
         click.echo(f"Error: Invalid datetime format '{dt}'. Use ISO 8601 (e.g. 1990-06-15T14:30:00).", err=True)
         sys.exit(1)
 
-    house_system = HouseSystem.WHOLE_SIGN if houses == "whole-sign" else HouseSystem.PLACIDUS
+    settings = ctx.obj["settings"]
+    if houses is None:
+        house_system = settings.default_house_system
+    elif houses == "whole-sign":
+        house_system = HouseSystem.WHOLE_SIGN
+    else:
+        house_system = HouseSystem.PLACIDUS
 
     if city:
         resolved = _resolve_city(city, settings.db_path, settings.geonames_username, quiet)
