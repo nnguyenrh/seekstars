@@ -31,7 +31,7 @@ class TestConfig:
         assert s.geonames_username == ""
         assert s.host == "0.0.0.0"
         assert s.port == 8000
-        assert s.default_house_system == HouseSystem.PLACIDUS
+        assert s.default_house_system == HouseSystem.WHOLE_SIGN
         assert s.log_level == "INFO"
         assert s.admin_password == "admin"
 
@@ -48,7 +48,7 @@ class TestConfig:
     def test_invalid_house_system_falls_back(self):
         os.environ["STARSEEK_DEFAULT_HOUSE_SYSTEM"] = "InvalidSystem"
         s = load_settings(env_file="/dev/null")
-        assert s.default_house_system == HouseSystem.PLACIDUS
+        assert s.default_house_system == HouseSystem.WHOLE_SIGN
 
     def test_orbs_default(self):
         s = load_settings(env_file="/dev/null")

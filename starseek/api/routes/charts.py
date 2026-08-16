@@ -9,6 +9,7 @@ from starseek.models.input import BirthData
 from starseek.models.chart import BirthChart, TransitReport
 from starseek.core.chart import build_chart
 from starseek.core.transits import calculate_transits
+from starseek.core.returns import calculate_return
 from starseek.formatters.markdown_fmt import to_markdown
 from starseek.services.storage import (
     save_chart, load_chart, list_charts, delete_chart,
@@ -33,6 +34,17 @@ class TransitRequest(BaseModel):
         description="Date/time for transit calculation (ISO 8601). Defaults to current time.",
     )
     include_minor_aspects: bool = Field(False, description="Include minor aspects")
+
+
+class ReturnRequest(BaseModel):
+    return_type: str = Field("solar", description="'solar' or 'lunar'")
+    year: Optional[int] = Field(None, description="Year for solar return (default: current year)")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Location latitude for return chart")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Location longitude for return chart")
+    timezone: Optional[str] = Field(None, description="IANA timezone for return chart location")
+    city: Optional[str] = Field(None, description="City for return chart location (triggers geocoding)")
+    house_system: Optional[str] = Field(None, description="House system override")
+    save: bool = Field(False, description="Save the return chart to database")
 
 
 @router.post("/charts", status_code=201, response_model=BirthChart)
@@ -132,6 +144,54 @@ def get_transits(
         ephe_path=settings.ephe_path,
     )
     return report
+
+
+@router.post("/charts/{chart_ref}/return", response_model=BirthChart)
+def get_return(
+    chart_ref: str,
+    body: ReturnRequest = ReturnRequest(),
+    settings: Settings = Depends(get_settings),
+    db_path: str = Depends(get_db_path),
+):
+    chart = _resolve_chart_ref(db_path, chart_ref)
+
+    loc_lat, loc_lng, loc_tz, loc_city = None, None, None, None
+    if body.city:
+        resolved = _resolve_city(body.city, db_path, settings.geonames_username)
+        loc_lat = resolved.latitude
+        loc_lng = resolved.longitude
+        loc_tz = resolved.timezone
+        loc_city = resolved.city_name
+    elif body.latitude is not None:
+        loc_lat = body.latitude
+        loc_lng = body.longitude
+        loc_tz = body.timezone
+
+    hs = None
+    if body.house_system:
+        from starseek.models.enums import HouseSystem
+        try:
+            hs = HouseSystem(body.house_system)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid house system: {body.house_system}")
+
+    result = calculate_return(
+        chart,
+        return_type=body.return_type,
+        year=body.year,
+        location_lat=loc_lat,
+        location_lng=loc_lng,
+        location_tz=loc_tz,
+        location_city=loc_city,
+        house_system=hs,
+        ephe_path=settings.ephe_path,
+    )
+
+    if body.save:
+        chart_id = save_chart(db_path, result, overwrite=True)
+        result.id = chart_id
+
+    return result
 
 
 def _resolve_city(city: str, db_path: str, username: str):

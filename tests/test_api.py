@@ -297,6 +297,62 @@ class TestTransitsEndpoint:
         assert response.json()["natal_name"] == "API Test"
 
 
+class TestReturnEndpoint:
+    def test_solar_return(self, client, saved_chart_id):
+        response = client.post(
+            f"/api/v1/charts/{saved_chart_id}/return",
+            json={"return_type": "solar", "year": 2026},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "Solar Return 2026" in data["name"]
+        assert len(data["planets"]) == 14
+
+    def test_lunar_return(self, client, saved_chart_id):
+        response = client.post(
+            f"/api/v1/charts/{saved_chart_id}/return",
+            json={"return_type": "lunar"},
+        )
+        assert response.status_code == 200
+        assert "Lunar Return" in response.json()["name"]
+
+    def test_return_default_solar(self, client, saved_chart_id):
+        response = client.post(f"/api/v1/charts/{saved_chart_id}/return")
+        assert response.status_code == 200
+        assert "Solar Return" in response.json()["name"]
+
+    def test_return_with_custom_location(self, client, saved_chart_id):
+        response = client.post(
+            f"/api/v1/charts/{saved_chart_id}/return",
+            json={
+                "year": 2026,
+                "latitude": 51.5074,
+                "longitude": -0.1278,
+                "timezone": "Europe/London",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["latitude"] == pytest.approx(51.5074)
+
+    def test_return_nonexistent_chart(self, client):
+        response = client.post("/api/v1/charts/9999/return")
+        assert response.status_code == 404
+
+    def test_return_by_name(self, client, saved_chart_id):
+        response = client.post("/api/v1/charts/API Test/return", json={"year": 2026})
+        assert response.status_code == 200
+        assert "API Test" in response.json()["name"]
+
+    def test_return_save(self, client, saved_chart_id):
+        response = client.post(
+            f"/api/v1/charts/{saved_chart_id}/return",
+            json={"year": 2026, "save": True},
+        )
+        assert response.status_code == 200
+        assert response.json()["id"] is not None
+
+
 class TestSynastryEndpoint:
     def test_synastry(self, client, saved_chart_id, second_chart_id):
         response = client.post("/api/v1/synastry", json={

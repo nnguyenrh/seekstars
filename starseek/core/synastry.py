@@ -90,6 +90,7 @@ def calculate_synastry(
     inter_aspects = find_inter_aspects(
         raw_a, raw_b, include_minor=include_minor_aspects
     )
+    inter_aspects.sort(key=lambda a: a.orb)
 
     a_in_b = compute_overlay(chart_a, chart_b)
     b_in_a = compute_overlay(chart_b, chart_a)

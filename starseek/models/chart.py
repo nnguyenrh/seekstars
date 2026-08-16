@@ -19,6 +19,8 @@ class PlanetPosition(BaseModel):
     sign_minute: int = Field(..., description="Arc-minute within the degree (0-59)")
     house: int = Field(..., ge=1, le=12, description="House number the planet falls in")
     dignity: Optional[Dignity] = Field(None, description="Essential dignity, if any")
+    sect_status: Optional[str] = Field(None, description="Sect status: in_sect, out_of_sect, or neutral")
+    condition: Optional[list[str]] = Field(None, description="Bonification/maltreatment notes")
 
 
 class HouseCusp(BaseModel):
@@ -44,6 +46,7 @@ class ChartSummary(BaseModel):
     dominant_modality: Modality
     modality_counts: dict[Modality, int]
     stelliums: list[dict] = Field(default_factory=list, description="Groups of 3+ planets in the same sign")
+    domicile_lord_chains: list[dict] = Field(default_factory=list, description="Domicile lord chain for each planet")
 
 
 class BirthChart(BaseModel):
@@ -55,6 +58,7 @@ class BirthChart(BaseModel):
     longitude: float
     timezone: str
     house_system: HouseSystem
+    sect: Optional[str] = Field(None, description="Chart sect: diurnal or nocturnal")
 
     planets: list[PlanetPosition]
     houses: list[HouseCusp]
@@ -88,6 +92,7 @@ class TransitAspect(BaseModel):
 class TransitReport(BaseModel):
     natal_chart_id: Optional[int] = Field(None, description="ID of the natal chart")
     natal_name: Optional[str] = Field(None, description="Name from the natal chart")
+    natal_sect: Optional[str] = Field(None, description="Sect of the natal chart: diurnal or nocturnal")
     transit_datetime: datetime = Field(..., description="Date/time for the transit calculation")
     transit_positions: list[TransitPosition]
     transit_aspects: list[TransitAspect]

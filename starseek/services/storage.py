@@ -86,6 +86,7 @@ def init_db(db_path: str, admin_password: str = "admin", force: bool = False) ->
 
     conn = _get_connection(db_path)
     try:
+        _deduplicate_chart_names(conn)
         conn.executescript(SCHEMA_SQL)
 
         row = conn.execute("SELECT id FROM users WHERE username = ?", (DEFAULT_ADMIN_USER,)).fetchone()
@@ -97,6 +98,29 @@ def init_db(db_path: str, admin_password: str = "admin", force: bool = False) ->
             conn.commit()
     finally:
         conn.close()
+
+
+def _deduplicate_chart_names(conn: sqlite3.Connection) -> None:
+    try:
+        conn.execute("SELECT id FROM charts LIMIT 1")
+    except sqlite3.OperationalError:
+        return
+
+    dupes = conn.execute(
+        """SELECT name, GROUP_CONCAT(id) as ids, COUNT(*) as cnt
+           FROM charts WHERE name IS NOT NULL
+           GROUP BY name HAVING cnt > 1"""
+    ).fetchall()
+
+    for row in dupes:
+        ids = [int(x) for x in row["ids"].split(",")]
+        keep_id = max(ids)
+        for old_id in ids:
+            if old_id != keep_id:
+                conn.execute("UPDATE charts SET name = NULL WHERE id = ?", (old_id,))
+
+    if dupes:
+        conn.commit()
 
 
 def _get_admin_id(conn: sqlite3.Connection) -> int:

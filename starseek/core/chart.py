@@ -16,6 +16,9 @@ from starseek.core.ephemeris import (
 from starseek.core.houses import build_house_cusps, assign_house
 from starseek.core.aspects import find_aspects
 from starseek.core.dignities import get_dignity
+from starseek.core.traditional import (
+    determine_sect, get_sect_status, get_all_lord_chains, evaluate_bonification,
+)
 
 
 CALCULATED_PLANETS = [
@@ -71,8 +74,22 @@ def build_chart(
             ))
 
         aspects = find_aspects(raw_positions, include_minor=include_minor_aspects)
+        aspects.sort(key=lambda a: a.orb)
+
+        sun_pos = next(p for p in raw_positions if p.planet == Planet.SUN)
+        sect = determine_sect(sun_pos.longitude, raw_cusps.ascendant)
+
+        for pp in planet_positions:
+            pp.sect_status = get_sect_status(pp.planet, sect)
+
+        conditions = evaluate_bonification(planet_positions, aspects, sect)
+        for pp in planet_positions:
+            notes = conditions.get(pp.planet.value)
+            if notes:
+                pp.condition = notes
 
         summary = _build_summary(planet_positions)
+        summary.domicile_lord_chains = get_all_lord_chains(planet_positions)
 
         location_str = birth_data.city or f"{lat:.4f}, {lng:.4f}"
 
@@ -84,6 +101,7 @@ def build_chart(
             longitude=lng,
             timezone=tz_name or "UTC",
             house_system=birth_data.house_system,
+            sect=sect,
             planets=planet_positions,
             houses=house_cusps,
             aspects=aspects,
