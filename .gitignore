@@ -35,3 +35,4 @@ backups/
 
 # Crush local data
 .crush/
+.crushrc
