@@ -306,6 +306,62 @@ class TestTransitsCommand:
         assert len(data["transit_positions"]) == 14
 
 
+class TestReturnCommand:
+    def test_solar_return_json(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "return", str(sample_chart_in_db),
+            "--year", "2026",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "Solar Return 2026" in data["name"]
+        assert len(data["planets"]) == 14
+
+    def test_lunar_return(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "return", str(sample_chart_in_db),
+            "--type", "lunar",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "Lunar Return" in data["name"]
+
+    def test_return_markdown(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "return", str(sample_chart_in_db),
+            "--year", "2026",
+            "--format", "markdown",
+        ])
+        assert result.exit_code == 0
+        assert "## Planetary Positions" in result.output
+
+    def test_return_by_name(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "return", "Test Person",
+            "--year", "2026",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "Test Person" in data["name"]
+
+    def test_return_nonexistent_chart(self, runner, db_path):
+        result = runner.invoke(cli, ["return", "9999", "--quiet"])
+        assert result.exit_code != 0
+        assert "not found" in result.output
+
+    def test_return_save(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "return", str(sample_chart_in_db),
+            "--year", "2026",
+            "--save",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+
+
 class TestSynastryCommand:
     def test_synastry_json(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
         result = runner.invoke(cli, [

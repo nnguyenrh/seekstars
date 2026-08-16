@@ -11,6 +11,7 @@ from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
 from starseek.core.transits import calculate_transits
 from starseek.core.synastry import calculate_synastry
+from starseek.core.returns import calculate_return
 from starseek.formatters.json_fmt import to_json, transit_to_json, synastry_to_json
 from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown, synastry_to_markdown
 from starseek.services.storage import (
@@ -383,6 +384,94 @@ def transits(ctx, chart_ref, date_str, time_str, fmt, quiet):
         click.echo(transit_to_markdown(report))
     else:
         click.echo(transit_to_json(report))
+
+
+@cli.command("return")
+@click.argument("chart_ref")
+@click.option("--year", "-y", type=int, default=None, help="Year for solar return (default: current year).")
+@click.option("--type", "-t", "return_type", type=click.Choice(["solar", "lunar"], case_sensitive=False),
+              default="solar", help="Return type (default: solar).")
+@click.option("--city", "-c", default=None, help="Location for return chart (default: birth location).")
+@click.option("--houses", type=click.Choice(["placidus", "whole-sign"], case_sensitive=False),
+              default=None, help="House system (default: same as natal).")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--save/--no-save", default=False, help="Save return chart to database.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def return_cmd(ctx, chart_ref, year, return_type, city, houses, fmt, save, quiet):
+    """Generate a solar or lunar return chart from a saved natal chart."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    natal = resolve_chart(settings.db_path, chart_ref)
+    if natal is None:
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
+        sys.exit(1)
+
+    if houses == "whole-sign":
+        house_system = HouseSystem.WHOLE_SIGN
+    elif houses == "placidus":
+        house_system = HouseSystem.PLACIDUS
+    else:
+        house_system = None
+
+    loc_lat, loc_lng, loc_tz, loc_city = None, None, None, None
+    if city:
+        username = _ensure_geonames_username(settings)
+        resolved = _resolve_city(city, settings.db_path, username, quiet)
+        if resolved is None:
+            sys.exit(1)
+        loc_lat = resolved.latitude
+        loc_lng = resolved.longitude
+        loc_tz = resolved.timezone
+        loc_city = resolved.city_name
+
+    try:
+        result = calculate_return(
+            natal,
+            return_type=return_type,
+            year=year,
+            location_lat=loc_lat,
+            location_lng=loc_lng,
+            location_tz=loc_tz,
+            location_city=loc_city,
+            house_system=house_system,
+            ephe_path=settings.ephe_path,
+        )
+    except Exception as e:
+        click.echo(f"Error calculating {return_type} return: {e}", err=True)
+        sys.exit(1)
+
+    if not quiet:
+        click.echo(f"Generated {return_type} return chart for {result.birth_datetime.isoformat()}", err=True)
+
+    if save:
+        overwrite = False
+        if result.name:
+            existing_id = chart_name_exists(settings.db_path, result.name)
+            if existing_id is not None:
+                if not quiet:
+                    if not click.confirm(
+                        f"Chart '{result.name}' already exists (ID {existing_id}). Overwrite?",
+                        err=True,
+                    ):
+                        click.echo("Cancelled. Chart not saved.", err=True)
+                        if fmt == "markdown":
+                            click.echo(to_markdown(result))
+                        else:
+                            click.echo(to_json(result))
+                        return
+                overwrite = True
+        chart_id = save_chart(settings.db_path, result, overwrite=overwrite)
+        if not quiet:
+            action = "updated" if overwrite else "saved"
+            click.echo(f"Return chart {action} with ID {chart_id}.", err=True)
+
+    if fmt == "markdown":
+        click.echo(to_markdown(result))
+    else:
+        click.echo(to_json(result))
 
 
 @cli.command()
