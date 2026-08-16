@@ -86,6 +86,20 @@ def _resolve_chart_ref(db_path: str, ref: str) -> "BirthChart | None":
     return chart
 
 
+_CHARTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "charts")
+
+
+def _svg_output_path(name: str, chart_type: str = "natal") -> str:
+    charts_dir = os.path.abspath(_CHARTS_DIR)
+    os.makedirs(charts_dir, exist_ok=True)
+    safe_name = name.replace(" ", "_").replace("/", "_") if name else "chart"
+    if chart_type != "natal":
+        filename = f"{safe_name}_{chart_type}.svg"
+    else:
+        filename = f"{safe_name}.svg"
+    return os.path.join(charts_dir, filename)
+
+
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -295,12 +309,11 @@ def show(ctx, chart_ref, fmt, output_file, theme):
             click.echo("Error: starseek-charts is not installed. Run: pip install -e ./starseek-charts", err=True)
             sys.exit(1)
         svg = render_natal_svg(result, theme=theme)
-        if output_file:
-            with open(output_file, "w") as f:
-                f.write(svg)
-            click.echo(f"SVG saved to {output_file}", err=True)
-        else:
-            click.echo(svg)
+        if not output_file:
+            output_file = _svg_output_path(result.name or chart_ref)
+        with open(output_file, "w") as f:
+            f.write(svg)
+        click.echo(f"SVG saved to {output_file}", err=True)
     elif fmt == "markdown":
         click.echo(to_markdown(result))
     else:
@@ -344,12 +357,15 @@ def render(ctx, chart_ref, chart_ref_b, chart_type, output_file, theme):
 
     svg = render_svg(chart_a, chart_b, chart_type=chart_type, theme=theme)
 
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write(svg)
-        click.echo(f"SVG saved to {output_file}", err=True)
-    else:
-        click.echo(svg)
+    if not output_file:
+        name = chart_a.name or chart_ref
+        if chart_b and chart_type == "synastry":
+            name = f"{chart_a.name or chart_ref}_{chart_b.name or chart_ref_b}"
+        output_file = _svg_output_path(name, chart_type)
+
+    with open(output_file, "w") as f:
+        f.write(svg)
+    click.echo(f"SVG saved to {output_file}", err=True)
 
 
 @cli.command()
