@@ -50,6 +50,21 @@ def sample_chart_in_db(db_path):
     return chart_id
 
 
+@pytest.fixture
+def second_chart_in_db(db_path):
+    bd = BirthData(
+        name="Second Person",
+        birth_datetime=datetime(1995, 6, 15, 14, 30, 0),
+        latitude=51.5074,
+        longitude=-0.1278,
+        timezone="Europe/London",
+        house_system=HouseSystem.PLACIDUS,
+    )
+    chart = build_chart(bd)
+    chart_id = save_chart(db_path, chart)
+    return chart_id
+
+
 class TestChartCommand:
     def test_chart_with_city(self, runner, db_path):
         result = runner.invoke(cli, [
@@ -232,5 +247,37 @@ class TestTransitsCommand:
 
     def test_transits_nonexistent_chart(self, runner, db_path):
         result = runner.invoke(cli, ["transits", "9999", "--quiet"])
+        assert result.exit_code != 0
+        assert "not found" in result.output
+
+
+class TestSynastryCommand:
+    def test_synastry_json(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        result = runner.invoke(cli, [
+            "synastry", str(sample_chart_in_db), str(second_chart_in_db),
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "inter_aspects" in data
+        assert "a_in_b_houses" in data
+        assert "b_in_a_houses" in data
+
+    def test_synastry_markdown(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        result = runner.invoke(cli, [
+            "synastry", str(sample_chart_in_db), str(second_chart_in_db),
+            "--format", "markdown",
+        ])
+        assert result.exit_code == 0
+        assert "## Inter-Chart Aspects" in result.output
+        assert "Houses" in result.output
+
+    def test_synastry_nonexistent_chart_a(self, runner, db_path, second_chart_in_db):
+        result = runner.invoke(cli, ["synastry", "9999", str(second_chart_in_db), "--quiet"])
+        assert result.exit_code != 0
+        assert "not found" in result.output
+
+    def test_synastry_nonexistent_chart_b(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, ["synastry", str(sample_chart_in_db), "9999", "--quiet"])
         assert result.exit_code != 0
         assert "not found" in result.output

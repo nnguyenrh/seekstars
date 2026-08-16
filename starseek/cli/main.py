@@ -10,8 +10,9 @@ from starseek.models.enums import HouseSystem
 from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
 from starseek.core.transits import calculate_transits
-from starseek.formatters.json_fmt import to_json, transit_to_json
-from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown
+from starseek.core.synastry import calculate_synastry
+from starseek.formatters.json_fmt import to_json, transit_to_json, synastry_to_json
+from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown, synastry_to_markdown
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
     cache_location, get_cached_location,
@@ -340,6 +341,45 @@ def transits(ctx, chart_id, date_str, time_str, fmt, quiet):
         click.echo(transit_to_markdown(report))
     else:
         click.echo(transit_to_json(report))
+
+
+@cli.command()
+@click.argument("chart_id_a", type=int)
+@click.argument("chart_id_b", type=int)
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def synastry(ctx, chart_id_a, chart_id_b, fmt, quiet):
+    """Compare two saved charts (synastry)."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    chart_a = load_chart(settings.db_path, chart_id_a)
+    if chart_a is None:
+        click.echo(f"Error: Chart {chart_id_a} not found.", err=True)
+        sys.exit(1)
+
+    chart_b = load_chart(settings.db_path, chart_id_b)
+    if chart_b is None:
+        click.echo(f"Error: Chart {chart_id_b} not found.", err=True)
+        sys.exit(1)
+
+    try:
+        report = calculate_synastry(chart_a, chart_b)
+    except Exception as e:
+        click.echo(f"Error calculating synastry: {e}", err=True)
+        sys.exit(1)
+
+    if not quiet:
+        name_a = chart_a.name or f"Chart {chart_id_a}"
+        name_b = chart_b.name or f"Chart {chart_id_b}"
+        click.echo(f"Comparing {name_a} with {name_b}...", err=True)
+
+    if fmt == "markdown":
+        click.echo(synastry_to_markdown(report))
+    else:
+        click.echo(synastry_to_json(report))
 
 
 def _resolve_city(city, db_path, username, quiet):

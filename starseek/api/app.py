@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from starseek.api.routes import charts, geocode, health
+from starseek.api.routes import charts, geocode, health, synastry
 from starseek.services.geocoding import GeocodingError
 
 
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(charts.router)
+    app.include_router(synastry.router)
     app.include_router(geocode.router)
     app.include_router(health.router)
 

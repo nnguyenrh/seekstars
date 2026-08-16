@@ -92,3 +92,32 @@ class TransitReport(BaseModel):
     transit_positions: list[TransitPosition]
     transit_aspects: list[TransitAspect]
     computed_at: datetime = Field(..., description="When this report was computed")
+
+
+class OverlayPlacement(BaseModel):
+    planet: Planet = Field(..., description="Planet from one chart")
+    planet_sign: Sign = Field(..., description="Sign the planet is in")
+    planet_degree: float = Field(..., description="Degree within the sign")
+    overlay_house: int = Field(..., ge=1, le=12, description="House in the other chart this planet falls in")
+
+
+class InterAspect(BaseModel):
+    planet_a: Planet = Field(..., description="Planet from chart A")
+    planet_b: Planet = Field(..., description="Planet from chart B")
+    aspect_type: AspectType
+    exact_angle: float = Field(..., description="The exact angle between the two bodies")
+    orb: float = Field(..., description="How far from exact the aspect is (in degrees)")
+    is_applying: bool = Field(..., description="Whether the aspect is applying or separating")
+
+
+class SynastryReport(BaseModel):
+    chart_a: BirthChart
+    chart_b: BirthChart
+    inter_aspects: list[InterAspect] = Field(..., description="Aspects between chart A and chart B planets")
+    a_in_b_houses: list[OverlayPlacement] = Field(
+        ..., description="Chart A's planets placed in chart B's houses"
+    )
+    b_in_a_houses: list[OverlayPlacement] = Field(
+        ..., description="Chart B's planets placed in chart A's houses"
+    )
+    computed_at: datetime = Field(..., description="When this report was computed")

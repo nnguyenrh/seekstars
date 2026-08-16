@@ -62,6 +62,19 @@ def saved_chart_id(db_path):
     return save_chart(db_path, chart)
 
 
+@pytest.fixture
+def second_chart_id(db_path):
+    bd = BirthData(
+        name="API Test B",
+        birth_datetime=datetime(1995, 6, 15, 14, 30, 0),
+        latitude=51.5074,
+        longitude=-0.1278,
+        timezone="Europe/London",
+    )
+    chart = build_chart(bd)
+    return save_chart(db_path, chart)
+
+
 class TestCreateChart:
     def test_create_with_coordinates(self, client):
         response = client.post("/api/v1/charts", json={
@@ -244,3 +257,52 @@ class TestTransitsEndpoint:
         data = response.json()
         assert data["natal_chart_id"] == saved_chart_id
         assert data["natal_name"] == "API Test"
+
+
+class TestSynastryEndpoint:
+    def test_synastry(self, client, saved_chart_id, second_chart_id):
+        response = client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "inter_aspects" in data
+        assert "a_in_b_houses" in data
+        assert "b_in_a_houses" in data
+        assert data["chart_a"]["name"] == "API Test"
+        assert data["chart_b"]["name"] == "API Test B"
+
+    def test_synastry_with_minor_aspects(self, client, saved_chart_id, second_chart_id):
+        major = client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+        }).json()
+        minor = client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+            "include_minor_aspects": True,
+        }).json()
+        assert len(minor["inter_aspects"]) >= len(major["inter_aspects"])
+
+    def test_synastry_nonexistent_chart_a(self, client, second_chart_id):
+        response = client.post("/api/v1/synastry", json={
+            "chart_a_id": 9999,
+            "chart_b_id": second_chart_id,
+        })
+        assert response.status_code == 404
+
+    def test_synastry_nonexistent_chart_b(self, client, saved_chart_id):
+        response = client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": 9999,
+        })
+        assert response.status_code == 404
+
+    def test_synastry_overlay_counts(self, client, saved_chart_id, second_chart_id):
+        data = client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+        }).json()
+        assert len(data["a_in_b_houses"]) == 14
+        assert len(data["b_in_a_houses"]) == 14

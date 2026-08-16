@@ -1,4 +1,4 @@
-from starseek.models.chart import BirthChart, TransitReport
+from starseek.models.chart import BirthChart, TransitReport, SynastryReport
 
 
 def to_markdown(chart: BirthChart) -> str:
@@ -99,6 +99,52 @@ def transit_to_markdown(report: TransitReport) -> str:
             )
     else:
         lines.append("No major transit aspects found.")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def synastry_to_markdown(report: SynastryReport) -> str:
+    lines: list[str] = []
+
+    name_a = report.chart_a.name or "Chart A"
+    name_b = report.chart_b.name or "Chart B"
+    lines.append(f"# Synastry: {name_a} & {name_b}")
+    lines.append("")
+
+    lines.append("## Inter-Chart Aspects")
+    lines.append("")
+    if report.inter_aspects:
+        lines.append(f"| {name_a} Planet | Aspect | {name_b} Planet | Orb | App/Sep |")
+        lines.append("|---------------|--------|---------------|-----|---------|")
+        for a in sorted(report.inter_aspects, key=lambda x: x.orb):
+            app_sep = "Applying" if a.is_applying else "Separating"
+            lines.append(
+                f"| {a.planet_a.value} | {a.aspect_type.value} "
+                f"| {a.planet_b.value} | {a.orb:.2f}\u00b0 | {app_sep} |"
+            )
+    else:
+        lines.append("No major inter-chart aspects found.")
+    lines.append("")
+
+    lines.append(f"## {name_a}'s Planets in {name_b}'s Houses")
+    lines.append("")
+    lines.append("| Planet | Sign | Degree | House |")
+    lines.append("|--------|------|--------|-------|")
+    for p in report.a_in_b_houses:
+        deg = int(p.planet_degree)
+        minute = int((p.planet_degree % 1) * 60)
+        lines.append(f"| {p.planet.value} | {p.planet_sign.value} | {deg}\u00b0{minute:02d}' | {p.overlay_house} |")
+    lines.append("")
+
+    lines.append(f"## {name_b}'s Planets in {name_a}'s Houses")
+    lines.append("")
+    lines.append("| Planet | Sign | Degree | House |")
+    lines.append("|--------|------|--------|-------|")
+    for p in report.b_in_a_houses:
+        deg = int(p.planet_degree)
+        minute = int((p.planet_degree % 1) * 60)
+        lines.append(f"| {p.planet.value} | {p.planet_sign.value} | {deg}\u00b0{minute:02d}' | {p.overlay_house} |")
     lines.append("")
 
     return "\n".join(lines)
