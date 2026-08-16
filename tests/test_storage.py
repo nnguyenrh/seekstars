@@ -5,12 +5,15 @@ from datetime import datetime
 
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
-    cache_location, get_cached_location, ChartListItem,
+    save_synastry, load_synastry, list_synastries, delete_synastry,
+    resolve_chart, chart_name_exists, load_chart_by_name,
+    cache_location, get_cached_location, ChartListItem, SynastryListItem,
 )
 from starseek.services.geocoding import GeocodingResult
 from starseek.models.enums import HouseSystem
 from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
+from starseek.core.synastry import calculate_synastry
 
 
 @pytest.fixture
@@ -87,7 +90,13 @@ class TestChartCRUD:
 
     def test_list_charts(self, db_path, sample_chart):
         save_chart(db_path, sample_chart)
-        save_chart(db_path, sample_chart)
+        chart2 = build_chart(BirthData(
+            name="Another Person",
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        save_chart(db_path, chart2)
 
         items, total = list_charts(db_path)
         assert total == 2
@@ -103,9 +112,15 @@ class TestChartCRUD:
         items, total = list_charts(db_path, name_filter="Nonexistent")
         assert total == 0
 
-    def test_list_pagination(self, db_path, sample_chart):
-        for _ in range(5):
-            save_chart(db_path, sample_chart)
+    def test_list_pagination(self, db_path):
+        for i in range(5):
+            chart = build_chart(BirthData(
+                name=f"Chart {i}",
+                birth_datetime=datetime(2000, 1, 1, i, 0, 0),
+                latitude=0.0, longitude=0.0, timezone="UTC",
+                house_system=HouseSystem.PLACIDUS,
+            ))
+            save_chart(db_path, chart)
 
         items, total = list_charts(db_path, limit=2, offset=0)
         assert total == 5
@@ -121,6 +136,73 @@ class TestChartCRUD:
 
     def test_delete_nonexistent(self, db_path):
         assert delete_chart(db_path, 9999) is False
+
+
+class TestChartNameLookup:
+    def test_load_by_name(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        loaded = load_chart_by_name(db_path, "Test Person")
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_load_by_name_nonexistent(self, db_path):
+        assert load_chart_by_name(db_path, "Nobody") is None
+
+    def test_resolve_by_id(self, db_path, sample_chart):
+        chart_id = save_chart(db_path, sample_chart)
+        loaded = resolve_chart(db_path, str(chart_id))
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_resolve_by_name(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        loaded = resolve_chart(db_path, "Test Person")
+        assert loaded is not None
+        assert loaded.name == "Test Person"
+
+    def test_resolve_nonexistent(self, db_path):
+        assert resolve_chart(db_path, "9999") is None
+        assert resolve_chart(db_path, "Nobody") is None
+
+    def test_chart_name_exists(self, db_path, sample_chart):
+        chart_id = save_chart(db_path, sample_chart)
+        assert chart_name_exists(db_path, "Test Person") == chart_id
+        assert chart_name_exists(db_path, "Nobody") is None
+
+    def test_unique_name_constraint(self, db_path, sample_chart):
+        save_chart(db_path, sample_chart)
+        import sqlite3
+        with pytest.raises(sqlite3.IntegrityError):
+            save_chart(db_path, sample_chart)
+
+    def test_overwrite_by_name(self, db_path, sample_chart):
+        original_id = save_chart(db_path, sample_chart)
+        chart2 = build_chart(BirthData(
+            name="Test Person",
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=51.5, longitude=-0.1, timezone="Europe/London",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        updated_id = save_chart(db_path, chart2, overwrite=True)
+        assert updated_id == original_id
+
+        loaded = load_chart(db_path, updated_id)
+        assert loaded.birth_location != "0.0000, 0.0000"
+
+    def test_unnamed_charts_no_conflict(self, db_path):
+        unnamed1 = build_chart(BirthData(
+            birth_datetime=datetime(2000, 1, 1, 0, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        unnamed2 = build_chart(BirthData(
+            birth_datetime=datetime(1990, 6, 15, 12, 0, 0),
+            latitude=0.0, longitude=0.0, timezone="UTC",
+            house_system=HouseSystem.PLACIDUS,
+        ))
+        id1 = save_chart(db_path, unnamed1)
+        id2 = save_chart(db_path, unnamed2)
+        assert id1 != id2
 
 
 class TestLocationCache:
@@ -177,3 +259,65 @@ class TestLocationCache:
 
         cached = get_cached_location(db_path, "london")
         assert cached.latitude == pytest.approx(39.8)
+
+
+class TestSynastryCRUD:
+    @pytest.fixture
+    def two_charts(self, db_path, sample_chart):
+        bd2 = BirthData(
+            name="Second Person",
+            birth_datetime=datetime(1995, 6, 15, 14, 30, 0),
+            latitude=51.5074,
+            longitude=-0.1278,
+            timezone="Europe/London",
+            house_system=HouseSystem.PLACIDUS,
+        )
+        chart_b = build_chart(bd2)
+        id_a = save_chart(db_path, sample_chart)
+        id_b = save_chart(db_path, chart_b)
+        chart_a = load_chart(db_path, id_a)
+        chart_b = load_chart(db_path, id_b)
+        return chart_a, chart_b
+
+    def test_save_and_load(self, db_path, two_charts):
+        chart_a, chart_b = two_charts
+        report = calculate_synastry(chart_a, chart_b)
+        report_id = save_synastry(db_path, report)
+        assert report_id > 0
+
+        loaded = load_synastry(db_path, report_id)
+        assert loaded is not None
+        assert loaded.chart_a.name == "Test Person"
+        assert loaded.chart_b.name == "Second Person"
+        assert len(loaded.inter_aspects) > 0
+        assert len(loaded.a_in_b_houses) == 14
+
+    def test_load_nonexistent(self, db_path):
+        assert load_synastry(db_path, 9999) is None
+
+    def test_list_synastries(self, db_path, two_charts):
+        chart_a, chart_b = two_charts
+        report = calculate_synastry(chart_a, chart_b)
+        save_synastry(db_path, report)
+        save_synastry(db_path, report)
+
+        items, total = list_synastries(db_path)
+        assert total == 2
+        assert len(items) == 2
+        assert isinstance(items[0], SynastryListItem)
+        assert items[0].name_a == "Test Person"
+        assert items[0].name_b == "Second Person"
+
+    def test_list_empty(self, db_path):
+        items, total = list_synastries(db_path)
+        assert total == 0
+
+    def test_delete_synastry(self, db_path, two_charts):
+        chart_a, chart_b = two_charts
+        report = calculate_synastry(chart_a, chart_b)
+        report_id = save_synastry(db_path, report)
+        assert delete_synastry(db_path, report_id) is True
+        assert load_synastry(db_path, report_id) is None
+
+    def test_delete_nonexistent(self, db_path):
+        assert delete_synastry(db_path, 9999) is False

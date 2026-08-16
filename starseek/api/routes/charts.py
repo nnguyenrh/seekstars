@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Optional
 
 from starseek.api.dependencies import get_settings, get_db_path
 from starseek.config import Settings
 from starseek.models.input import BirthData
-from starseek.models.chart import BirthChart
+from starseek.models.chart import BirthChart, TransitReport
 from starseek.core.chart import build_chart
+from starseek.core.transits import calculate_transits
 from starseek.formatters.markdown_fmt import to_markdown
 from starseek.services.storage import (
     save_chart, load_chart, list_charts, delete_chart,
+    resolve_chart, chart_name_exists,
     cache_location, get_cached_location,
 )
 from starseek.services.geocoding import (
@@ -24,9 +27,18 @@ class ChartListResponse(BaseModel):
     total: int
 
 
+class TransitRequest(BaseModel):
+    transit_datetime: Optional[datetime] = Field(
+        None,
+        description="Date/time for transit calculation (ISO 8601). Defaults to current time.",
+    )
+    include_minor_aspects: bool = Field(False, description="Include minor aspects")
+
+
 @router.post("/charts", status_code=201, response_model=BirthChart)
 def create_chart(
     birth_data: BirthData,
+    overwrite: bool = Query(False, description="Overwrite existing chart with same name"),
     settings: Settings = Depends(get_settings),
     db_path: str = Depends(get_db_path),
 ):
@@ -39,8 +51,17 @@ def create_chart(
             "city": resolved.city_name,
         })
 
+    if birth_data.name and not overwrite:
+        existing_id = chart_name_exists(db_path, birth_data.name)
+        if existing_id is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Chart '{birth_data.name}' already exists (ID {existing_id}). "
+                       "Use overwrite=true to replace it.",
+            )
+
     chart = build_chart(birth_data, ephe_path=settings.ephe_path)
-    chart_id = save_chart(db_path, chart)
+    chart_id = save_chart(db_path, chart, overwrite=overwrite)
     chart.id = chart_id
     return chart
 
@@ -67,29 +88,50 @@ def get_charts(
     return ChartListResponse(charts=charts, total=total)
 
 
-@router.get("/charts/{chart_id}", response_model=BirthChart)
-def get_chart(chart_id: int, db_path: str = Depends(get_db_path)):
-    chart = load_chart(db_path, chart_id)
+def _resolve_chart_ref(db_path: str, chart_ref: str) -> BirthChart:
+    chart = resolve_chart(db_path, chart_ref)
     if chart is None:
-        raise HTTPException(status_code=404, detail=f"Chart {chart_id} not found")
+        raise HTTPException(status_code=404, detail=f"Chart '{chart_ref}' not found")
     return chart
 
 
-@router.delete("/charts/{chart_id}", status_code=204)
-def remove_chart(chart_id: int, db_path: str = Depends(get_db_path)):
-    deleted = delete_chart(db_path, chart_id)
+@router.get("/charts/{chart_ref}", response_model=BirthChart)
+def get_chart(chart_ref: str, db_path: str = Depends(get_db_path)):
+    return _resolve_chart_ref(db_path, chart_ref)
+
+
+@router.delete("/charts/{chart_ref}", status_code=204)
+def remove_chart(chart_ref: str, db_path: str = Depends(get_db_path)):
+    chart = _resolve_chart_ref(db_path, chart_ref)
+    deleted = delete_chart(db_path, chart.id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Chart {chart_id} not found")
+        raise HTTPException(status_code=404, detail=f"Chart '{chart_ref}' not found")
     return Response(status_code=204)
 
 
-@router.get("/charts/{chart_id}/markdown")
-def get_chart_markdown(chart_id: int, db_path: str = Depends(get_db_path)):
-    chart = load_chart(db_path, chart_id)
-    if chart is None:
-        raise HTTPException(status_code=404, detail=f"Chart {chart_id} not found")
+@router.get("/charts/{chart_ref}/markdown")
+def get_chart_markdown(chart_ref: str, db_path: str = Depends(get_db_path)):
+    chart = _resolve_chart_ref(db_path, chart_ref)
     md = to_markdown(chart)
     return Response(content=md, media_type="text/markdown")
+
+
+@router.post("/charts/{chart_ref}/transits", response_model=TransitReport)
+def get_transits(
+    chart_ref: str,
+    body: TransitRequest = TransitRequest(),
+    settings: Settings = Depends(get_settings),
+    db_path: str = Depends(get_db_path),
+):
+    chart = _resolve_chart_ref(db_path, chart_ref)
+
+    report = calculate_transits(
+        chart,
+        transit_dt=body.transit_datetime,
+        include_minor_aspects=body.include_minor_aspects,
+        ephe_path=settings.ephe_path,
+    )
+    return report
 
 
 def _resolve_city(city: str, db_path: str, username: str):

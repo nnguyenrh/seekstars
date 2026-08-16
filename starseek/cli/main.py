@@ -9,10 +9,14 @@ from starseek.config import get_settings, reset_settings
 from starseek.models.enums import HouseSystem
 from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
-from starseek.formatters.json_fmt import to_json
-from starseek.formatters.markdown_fmt import to_markdown
+from starseek.core.transits import calculate_transits
+from starseek.core.synastry import calculate_synastry
+from starseek.formatters.json_fmt import to_json, transit_to_json, synastry_to_json
+from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown, synastry_to_markdown
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
+    save_synastry, load_synastry, list_synastries, delete_synastry,
+    resolve_chart, chart_name_exists,
     cache_location, get_cached_location,
 )
 from starseek.services.geocoding import (
@@ -76,6 +80,11 @@ def _save_geonames_to_env(username: str) -> None:
         f.write(f"\nGEONAMES_USERNAME={username}\n")
 
 
+def _resolve_chart_ref(db_path: str, ref: str) -> "BirthChart | None":
+    chart = resolve_chart(db_path, ref)
+    return chart
+
+
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -132,9 +141,26 @@ def chart(ctx, name, date_str, time_str, city, houses, fmt, save, quiet):
 
     if save:
         init_db(settings.db_path, admin_password=settings.admin_password)
-        chart_id = save_chart(settings.db_path, result)
+        overwrite = False
+        if name:
+            existing_id = chart_name_exists(settings.db_path, name)
+            if existing_id is not None:
+                if not quiet:
+                    if not click.confirm(
+                        f"Chart '{name}' already exists (ID {existing_id}). Overwrite?",
+                        err=True,
+                    ):
+                        click.echo("Cancelled. Chart not saved.", err=True)
+                        if fmt == "markdown":
+                            click.echo(to_markdown(result))
+                        else:
+                            click.echo(to_json(result))
+                        return
+                overwrite = True
+        chart_id = save_chart(settings.db_path, result, overwrite=overwrite)
         if not quiet:
-            click.echo(f"Chart saved with ID {chart_id}.", err=True)
+            action = "updated" if overwrite else "saved"
+            click.echo(f"Chart {action} with ID {chart_id}.", err=True)
 
     if fmt == "markdown":
         click.echo(to_markdown(result))
@@ -189,9 +215,26 @@ def chart_manual(ctx, name, dt, lat, lng, tz, houses, fmt, save, quiet):
 
     if save:
         init_db(settings.db_path, admin_password=settings.admin_password)
-        chart_id = save_chart(settings.db_path, result)
+        overwrite = False
+        if name:
+            existing_id = chart_name_exists(settings.db_path, name)
+            if existing_id is not None:
+                if not quiet:
+                    if not click.confirm(
+                        f"Chart '{name}' already exists (ID {existing_id}). Overwrite?",
+                        err=True,
+                    ):
+                        click.echo("Cancelled. Chart not saved.", err=True)
+                        if fmt == "markdown":
+                            click.echo(to_markdown(result))
+                        else:
+                            click.echo(to_json(result))
+                        return
+                overwrite = True
+        chart_id = save_chart(settings.db_path, result, overwrite=overwrite)
         if not quiet:
-            click.echo(f"Chart saved with ID {chart_id}.", err=True)
+            action = "updated" if overwrite else "saved"
+            click.echo(f"Chart {action} with ID {chart_id}.", err=True)
 
     if fmt == "markdown":
         click.echo(to_markdown(result))
@@ -227,18 +270,18 @@ def list_cmd(ctx, name, limit, offset):
 
 
 @cli.command()
-@click.argument("chart_id", type=int)
+@click.argument("chart_ref")
 @click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
               default="json", help="Output format.")
 @click.pass_context
-def show(ctx, chart_id, fmt):
-    """Show a saved chart by ID."""
+def show(ctx, chart_ref, fmt):
+    """Show a saved chart by ID or name."""
     settings = ctx.obj["settings"]
     init_db(settings.db_path, admin_password=settings.admin_password)
 
-    result = load_chart(settings.db_path, chart_id)
+    result = resolve_chart(settings.db_path, chart_ref)
     if result is None:
-        click.echo(f"Error: Chart {chart_id} not found.", err=True)
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
         sys.exit(1)
 
     if fmt == "markdown":
@@ -248,29 +291,30 @@ def show(ctx, chart_id, fmt):
 
 
 @cli.command()
-@click.argument("chart_id", type=int)
+@click.argument("chart_ref")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation.")
 @click.pass_context
-def delete(ctx, chart_id, yes):
-    """Delete a saved chart by ID."""
+def delete(ctx, chart_ref, yes):
+    """Delete a saved chart by ID or name."""
     settings = ctx.obj["settings"]
     init_db(settings.db_path, admin_password=settings.admin_password)
 
+    result = resolve_chart(settings.db_path, chart_ref)
+    if result is None:
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
+        sys.exit(1)
+
     if not yes:
-        result = load_chart(settings.db_path, chart_id)
-        if result is None:
-            click.echo(f"Error: Chart {chart_id} not found.", err=True)
-            sys.exit(1)
         name = result.name or "(unnamed)"
-        if not click.confirm(f"Delete chart {chart_id} ({name})?"):
+        if not click.confirm(f"Delete chart {result.id} ({name})?"):
             click.echo("Cancelled.")
             return
 
-    deleted = delete_chart(settings.db_path, chart_id)
+    deleted = delete_chart(settings.db_path, result.id)
     if deleted:
-        click.echo(f"Chart {chart_id} deleted.")
+        click.echo(f"Chart {result.id} deleted.")
     else:
-        click.echo(f"Error: Chart {chart_id} not found.", err=True)
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
         sys.exit(1)
 
 
@@ -297,6 +341,169 @@ def geocode(ctx, city, max_rows):
         click.echo(
             f"{i:>2}  {r.city_name:<40} {r.latitude:>9.4f} {r.longitude:>10.4f}  {r.timezone:<25}"
         )
+
+
+@cli.command()
+@click.argument("chart_ref")
+@click.option("--date", "-d", "date_str", default=None, help="Transit date (YYYY-MM-DD). Defaults to today.")
+@click.option("--time", "-t", "time_str", default=None, help="Transit time in 24-hour format (HH:MM). Defaults to now.")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def transits(ctx, chart_ref, date_str, time_str, fmt, quiet):
+    """Show current transits for a saved natal chart."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    natal = resolve_chart(settings.db_path, chart_ref)
+    if natal is None:
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
+        sys.exit(1)
+
+    if date_str or time_str:
+        d = date_str or datetime.now().strftime("%Y-%m-%d")
+        t = time_str or "12:00"
+        transit_dt = _parse_birth_datetime(d, t)
+    else:
+        transit_dt = None
+
+    try:
+        report = calculate_transits(
+            natal, transit_dt=transit_dt, ephe_path=settings.ephe_path
+        )
+    except Exception as e:
+        click.echo(f"Error calculating transits: {e}", err=True)
+        sys.exit(1)
+
+    if not quiet and transit_dt is None:
+        click.echo("Calculating transits for current time...", err=True)
+
+    if fmt == "markdown":
+        click.echo(transit_to_markdown(report))
+    else:
+        click.echo(transit_to_json(report))
+
+
+@cli.command()
+@click.argument("chart_ref_a")
+@click.argument("chart_ref_b")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--save/--no-save", default=False, help="Save synastry report to database.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def synastry(ctx, chart_ref_a, chart_ref_b, fmt, save, quiet):
+    """Compare two saved charts (synastry)."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    chart_a = resolve_chart(settings.db_path, chart_ref_a)
+    if chart_a is None:
+        click.echo(f"Error: Chart '{chart_ref_a}' not found.", err=True)
+        sys.exit(1)
+
+    chart_b = resolve_chart(settings.db_path, chart_ref_b)
+    if chart_b is None:
+        click.echo(f"Error: Chart '{chart_ref_b}' not found.", err=True)
+        sys.exit(1)
+
+    try:
+        report = calculate_synastry(chart_a, chart_b)
+    except Exception as e:
+        click.echo(f"Error calculating synastry: {e}", err=True)
+        sys.exit(1)
+
+    if save:
+        report_id = save_synastry(settings.db_path, report)
+        if not quiet:
+            click.echo(f"Synastry report saved with ID {report_id}.", err=True)
+
+    if not quiet:
+        name_a = chart_a.name or f"Chart {chart_ref_a}"
+        name_b = chart_b.name or f"Chart {chart_ref_b}"
+        click.echo(f"Comparing {name_a} with {name_b}...", err=True)
+
+    if fmt == "markdown":
+        click.echo(synastry_to_markdown(report))
+    else:
+        click.echo(synastry_to_json(report))
+
+
+@cli.command("list-synastry")
+@click.option("--limit", "-l", default=20, help="Max results.")
+@click.option("--offset", "-o", default=0, help="Result offset.")
+@click.pass_context
+def list_synastry_cmd(ctx, limit, offset):
+    """List saved synastry reports."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    items, total = list_synastries(settings.db_path, limit=limit, offset=offset)
+
+    if total == 0:
+        click.echo("No synastry reports found.")
+        return
+
+    click.echo(f"Synastry Reports ({total} total):")
+    click.echo(f"{'ID':>4}  {'Person A':<20} {'Person B':<20} {'Chart A':>7} {'Chart B':>7}  {'Created':<20}")
+    click.echo("-" * 85)
+    for item in items:
+        name_a = item.name_a or "(unnamed)"
+        name_b = item.name_b or "(unnamed)"
+        click.echo(
+            f"{item.id:>4}  {name_a:<20} {name_b:<20} "
+            f"{item.chart_a_id:>7} {item.chart_b_id:>7}  {item.created_at:<20}"
+        )
+
+
+@cli.command("show-synastry")
+@click.argument("report_id", type=int)
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.pass_context
+def show_synastry_cmd(ctx, report_id, fmt):
+    """Show a saved synastry report by ID."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    report = load_synastry(settings.db_path, report_id)
+    if report is None:
+        click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+        sys.exit(1)
+
+    if fmt == "markdown":
+        click.echo(synastry_to_markdown(report))
+    else:
+        click.echo(synastry_to_json(report))
+
+
+@cli.command("delete-synastry")
+@click.argument("report_id", type=int)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation.")
+@click.pass_context
+def delete_synastry_cmd(ctx, report_id, yes):
+    """Delete a saved synastry report by ID."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    if not yes:
+        report = load_synastry(settings.db_path, report_id)
+        if report is None:
+            click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+            sys.exit(1)
+        name_a = report.chart_a.name or "(unnamed)"
+        name_b = report.chart_b.name or "(unnamed)"
+        if not click.confirm(f"Delete synastry report {report_id} ({name_a} & {name_b})?"):
+            click.echo("Cancelled.")
+            return
+
+    deleted = delete_synastry(settings.db_path, report_id)
+    if deleted:
+        click.echo(f"Synastry report {report_id} deleted.")
+    else:
+        click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+        sys.exit(1)
 
 
 def _resolve_city(city, db_path, username, quiet):

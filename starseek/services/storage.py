@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from starseek.models.chart import BirthChart
+from starseek.models.chart import BirthChart, SynastryReport
 from starseek.services.geocoding import GeocodingResult
 
 
@@ -47,7 +47,26 @@ CREATE TABLE IF NOT EXISTS locations_cache (
 
 CREATE INDEX IF NOT EXISTS idx_locations_query ON locations_cache(city_query);
 CREATE INDEX IF NOT EXISTS idx_charts_name ON charts(name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_charts_name_unique ON charts(name) WHERE name IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_charts_user_id ON charts(user_id);
+
+CREATE TABLE IF NOT EXISTS synastry_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    chart_a_id INTEGER NOT NULL,
+    chart_b_id INTEGER NOT NULL,
+    name_a TEXT,
+    name_b TEXT,
+    report_data JSON NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (chart_a_id) REFERENCES charts(id) ON DELETE CASCADE,
+    FOREIGN KEY (chart_b_id) REFERENCES charts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_synastry_user_id ON synastry_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_synastry_chart_a ON synastry_reports(chart_a_id);
+CREATE INDEX IF NOT EXISTS idx_synastry_chart_b ON synastry_reports(chart_b_id);
 """
 
 DEFAULT_ADMIN_USER = "admin"
@@ -87,11 +106,35 @@ def _get_admin_id(conn: sqlite3.Connection) -> int:
     return row["id"]
 
 
-def save_chart(db_path: str, chart: BirthChart) -> int:
+def save_chart(db_path: str, chart: BirthChart, overwrite: bool = False) -> int:
     conn = _get_connection(db_path)
     try:
         user_id = _get_admin_id(conn)
         chart_json = chart.model_dump_json()
+
+        if overwrite and chart.name:
+            existing = conn.execute(
+                "SELECT id FROM charts WHERE name = ?", (chart.name,)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    """UPDATE charts SET user_id=?, birth_datetime=?, birth_location=?,
+                       latitude=?, longitude=?, timezone=?, house_system=?, chart_data=?
+                       WHERE id=?""",
+                    (
+                        user_id,
+                        chart.birth_datetime.isoformat(),
+                        chart.birth_location,
+                        chart.latitude,
+                        chart.longitude,
+                        chart.timezone,
+                        chart.house_system.value,
+                        chart_json,
+                        existing["id"],
+                    ),
+                )
+                conn.commit()
+                return existing["id"]
 
         cursor = conn.execute(
             """INSERT INTO charts (user_id, name, birth_datetime, birth_location,
@@ -130,6 +173,43 @@ def load_chart(db_path: str, chart_id: int) -> BirthChart | None:
         chart = BirthChart.model_validate_json(row["chart_data"])
         chart.id = row["id"]
         return chart
+    finally:
+        conn.close()
+
+
+def load_chart_by_name(db_path: str, name: str) -> BirthChart | None:
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, chart_data FROM charts WHERE name = ?",
+            (name,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        chart = BirthChart.model_validate_json(row["chart_data"])
+        chart.id = row["id"]
+        return chart
+    finally:
+        conn.close()
+
+
+def resolve_chart(db_path: str, ref: str) -> BirthChart | None:
+    try:
+        chart_id = int(ref)
+        return load_chart(db_path, chart_id)
+    except ValueError:
+        return load_chart_by_name(db_path, ref)
+
+
+def chart_name_exists(db_path: str, name: str) -> int | None:
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id FROM charts WHERE name = ?", (name,)
+        ).fetchone()
+        return row["id"] if row else None
     finally:
         conn.close()
 
@@ -194,6 +274,104 @@ def delete_chart(db_path: str, chart_id: int) -> bool:
     conn = _get_connection(db_path)
     try:
         cursor = conn.execute("DELETE FROM charts WHERE id = ?", (chart_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def save_synastry(db_path: str, report: SynastryReport) -> int:
+    conn = _get_connection(db_path)
+    try:
+        user_id = _get_admin_id(conn)
+        report_json = report.model_dump_json()
+
+        cursor = conn.execute(
+            """INSERT INTO synastry_reports
+               (user_id, chart_a_id, chart_b_id, name_a, name_b, report_data)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                user_id,
+                report.chart_a.id,
+                report.chart_b.id,
+                report.chart_a.name,
+                report.chart_b.name,
+                report_json,
+            ),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def load_synastry(db_path: str, report_id: int) -> SynastryReport | None:
+    conn = _get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id, report_data FROM synastry_reports WHERE id = ?",
+            (report_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return SynastryReport.model_validate_json(row["report_data"])
+    finally:
+        conn.close()
+
+
+@dataclass
+class SynastryListItem:
+    id: int
+    name_a: Optional[str]
+    name_b: Optional[str]
+    chart_a_id: int
+    chart_b_id: int
+    created_at: str
+
+
+def list_synastries(
+    db_path: str,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[SynastryListItem], int]:
+    conn = _get_connection(db_path)
+    try:
+        count_row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM synastry_reports"
+        ).fetchone()
+        total = count_row["cnt"]
+
+        rows = conn.execute(
+            """SELECT id, name_a, name_b, chart_a_id, chart_b_id, created_at
+               FROM synastry_reports
+               ORDER BY created_at DESC
+               LIMIT ? OFFSET ?""",
+            [limit, offset],
+        ).fetchall()
+
+        items = [
+            SynastryListItem(
+                id=r["id"],
+                name_a=r["name_a"],
+                name_b=r["name_b"],
+                chart_a_id=r["chart_a_id"],
+                chart_b_id=r["chart_b_id"],
+                created_at=r["created_at"],
+            )
+            for r in rows
+        ]
+
+        return items, total
+    finally:
+        conn.close()
+
+
+def delete_synastry(db_path: str, report_id: int) -> bool:
+    conn = _get_connection(db_path)
+    try:
+        cursor = conn.execute("DELETE FROM synastry_reports WHERE id = ?", (report_id,))
         conn.commit()
         return cursor.rowcount > 0
     finally:
