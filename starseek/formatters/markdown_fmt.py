@@ -1,4 +1,4 @@
-from starseek.models.chart import BirthChart
+from starseek.models.chart import BirthChart, TransitReport
 
 
 def to_markdown(chart: BirthChart) -> str:
@@ -61,4 +61,44 @@ def to_markdown(chart: BirthChart) -> str:
             lines.append(f"- {st['sign']}: {planets_str}")
 
     lines.append("")
+    return "\n".join(lines)
+
+
+def transit_to_markdown(report: TransitReport) -> str:
+    lines: list[str] = []
+
+    title = f"Transits for {report.natal_name}" if report.natal_name else "Transit Report"
+    lines.append(f"# {title}")
+    lines.append("")
+    lines.append(f"**Transit Date/Time:** {report.transit_datetime.isoformat()}")
+    if report.natal_chart_id is not None:
+        lines.append(f"**Natal Chart ID:** {report.natal_chart_id}")
+    lines.append("")
+
+    lines.append("## Current Planetary Positions")
+    lines.append("")
+    lines.append("| Planet | Sign | Degree | Rx |")
+    lines.append("|--------|------|--------|----|")
+    for p in report.transit_positions:
+        rx = "R" if p.is_retrograde else ""
+        deg = int(p.sign_degree)
+        minute = p.sign_minute
+        lines.append(f"| {p.planet.value} | {p.sign.value} | {deg}\u00b0{minute:02d}' | {rx} |")
+    lines.append("")
+
+    lines.append("## Transit-to-Natal Aspects")
+    lines.append("")
+    if report.transit_aspects:
+        lines.append("| Transit Planet | Aspect | Natal Planet | Orb | App/Sep |")
+        lines.append("|---------------|--------|-------------|-----|---------|")
+        for a in sorted(report.transit_aspects, key=lambda x: x.orb):
+            app_sep = "Applying" if a.is_applying else "Separating"
+            lines.append(
+                f"| {a.transit_planet.value} | {a.aspect_type.value} "
+                f"| {a.natal_planet.value} | {a.orb:.2f}\u00b0 | {app_sep} |"
+            )
+    else:
+        lines.append("No major transit aspects found.")
+    lines.append("")
+
     return "\n".join(lines)

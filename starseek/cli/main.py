@@ -9,8 +9,9 @@ from starseek.config import get_settings, reset_settings
 from starseek.models.enums import HouseSystem
 from starseek.models.input import BirthData
 from starseek.core.chart import build_chart
-from starseek.formatters.json_fmt import to_json
-from starseek.formatters.markdown_fmt import to_markdown
+from starseek.core.transits import calculate_transits
+from starseek.formatters.json_fmt import to_json, transit_to_json
+from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
     cache_location, get_cached_location,
@@ -297,6 +298,48 @@ def geocode(ctx, city, max_rows):
         click.echo(
             f"{i:>2}  {r.city_name:<40} {r.latitude:>9.4f} {r.longitude:>10.4f}  {r.timezone:<25}"
         )
+
+
+@cli.command()
+@click.argument("chart_id", type=int)
+@click.option("--date", "-d", "date_str", default=None, help="Transit date (YYYY-MM-DD). Defaults to today.")
+@click.option("--time", "-t", "time_str", default=None, help="Transit time in 24-hour format (HH:MM). Defaults to now.")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
+@click.pass_context
+def transits(ctx, chart_id, date_str, time_str, fmt, quiet):
+    """Show current transits for a saved natal chart."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    natal = load_chart(settings.db_path, chart_id)
+    if natal is None:
+        click.echo(f"Error: Chart {chart_id} not found.", err=True)
+        sys.exit(1)
+
+    if date_str or time_str:
+        d = date_str or datetime.now().strftime("%Y-%m-%d")
+        t = time_str or "12:00"
+        transit_dt = _parse_birth_datetime(d, t)
+    else:
+        transit_dt = None
+
+    try:
+        report = calculate_transits(
+            natal, transit_dt=transit_dt, ephe_path=settings.ephe_path
+        )
+    except Exception as e:
+        click.echo(f"Error calculating transits: {e}", err=True)
+        sys.exit(1)
+
+    if not quiet and transit_dt is None:
+        click.echo("Calculating transits for current time...", err=True)
+
+    if fmt == "markdown":
+        click.echo(transit_to_markdown(report))
+    else:
+        click.echo(transit_to_json(report))
 
 
 def _resolve_city(city, db_path, username, quiet):

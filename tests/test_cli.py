@@ -185,3 +185,52 @@ class TestDeleteCommand:
     def test_delete_nonexistent(self, runner, db_path):
         result = runner.invoke(cli, ["delete", "9999", "--yes"])
         assert result.exit_code != 0
+
+
+class TestTransitsCommand:
+    def test_transits_json(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "transits", str(sample_chart_in_db),
+            "--date", "2026-06-15",
+            "--time", "12:00",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "transit_positions" in data
+        assert "transit_aspects" in data
+        assert len(data["transit_positions"]) == 14
+
+    def test_transits_markdown(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "transits", str(sample_chart_in_db),
+            "--date", "2026-06-15",
+            "--time", "12:00",
+            "--format", "markdown",
+        ])
+        assert result.exit_code == 0
+        assert "## Current Planetary Positions" in result.output
+        assert "## Transit-to-Natal Aspects" in result.output
+
+    def test_transits_default_time(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "transits", str(sample_chart_in_db), "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["transit_positions"]) == 14
+
+    def test_transits_date_only(self, runner, db_path, sample_chart_in_db):
+        result = runner.invoke(cli, [
+            "transits", str(sample_chart_in_db),
+            "--date", "2026-06-15",
+            "--quiet",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "2026-06-15" in data["transit_datetime"]
+
+    def test_transits_nonexistent_chart(self, runner, db_path):
+        result = runner.invoke(cli, ["transits", "9999", "--quiet"])
+        assert result.exit_code != 0
+        assert "not found" in result.output

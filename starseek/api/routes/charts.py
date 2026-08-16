@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Optional
 
 from starseek.api.dependencies import get_settings, get_db_path
 from starseek.config import Settings
 from starseek.models.input import BirthData
-from starseek.models.chart import BirthChart
+from starseek.models.chart import BirthChart, TransitReport
 from starseek.core.chart import build_chart
+from starseek.core.transits import calculate_transits
 from starseek.formatters.markdown_fmt import to_markdown
 from starseek.services.storage import (
     save_chart, load_chart, list_charts, delete_chart,
@@ -22,6 +24,14 @@ router = APIRouter(prefix="/api/v1", tags=["charts"])
 class ChartListResponse(BaseModel):
     charts: list[dict]
     total: int
+
+
+class TransitRequest(BaseModel):
+    transit_datetime: Optional[datetime] = Field(
+        None,
+        description="Date/time for transit calculation (ISO 8601). Defaults to current time.",
+    )
+    include_minor_aspects: bool = Field(False, description="Include minor aspects")
 
 
 @router.post("/charts", status_code=201, response_model=BirthChart)
@@ -90,6 +100,26 @@ def get_chart_markdown(chart_id: int, db_path: str = Depends(get_db_path)):
         raise HTTPException(status_code=404, detail=f"Chart {chart_id} not found")
     md = to_markdown(chart)
     return Response(content=md, media_type="text/markdown")
+
+
+@router.post("/charts/{chart_id}/transits", response_model=TransitReport)
+def get_transits(
+    chart_id: int,
+    body: TransitRequest = TransitRequest(),
+    settings: Settings = Depends(get_settings),
+    db_path: str = Depends(get_db_path),
+):
+    chart = load_chart(db_path, chart_id)
+    if chart is None:
+        raise HTTPException(status_code=404, detail=f"Chart {chart_id} not found")
+
+    report = calculate_transits(
+        chart,
+        transit_dt=body.transit_datetime,
+        include_minor_aspects=body.include_minor_aspects,
+        ephe_path=settings.ephe_path,
+    )
+    return report
 
 
 def _resolve_city(city: str, db_path: str, username: str):

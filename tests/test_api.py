@@ -200,3 +200,47 @@ class TestGeocodeEndpoint:
     def test_geocode_empty_city(self, client):
         response = client.post("/api/v1/geocode", json={"city": ""})
         assert response.status_code == 422
+
+
+class TestTransitsEndpoint:
+    def test_transits_default_time(self, client, saved_chart_id):
+        response = client.post(f"/api/v1/charts/{saved_chart_id}/transits")
+        assert response.status_code == 200
+        data = response.json()
+        assert "transit_positions" in data
+        assert "transit_aspects" in data
+        assert len(data["transit_positions"]) == 14
+
+    def test_transits_specific_time(self, client, saved_chart_id):
+        response = client.post(
+            f"/api/v1/charts/{saved_chart_id}/transits",
+            json={"transit_datetime": "2026-06-15T12:00:00"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "2026-06-15" in data["transit_datetime"]
+        assert len(data["transit_positions"]) == 14
+
+    def test_transits_with_minor_aspects(self, client, saved_chart_id):
+        major = client.post(
+            f"/api/v1/charts/{saved_chart_id}/transits",
+            json={"transit_datetime": "2026-06-15T12:00:00"},
+        ).json()
+        minor = client.post(
+            f"/api/v1/charts/{saved_chart_id}/transits",
+            json={
+                "transit_datetime": "2026-06-15T12:00:00",
+                "include_minor_aspects": True,
+            },
+        ).json()
+        assert len(minor["transit_aspects"]) >= len(major["transit_aspects"])
+
+    def test_transits_nonexistent_chart(self, client):
+        response = client.post("/api/v1/charts/9999/transits")
+        assert response.status_code == 404
+
+    def test_transits_has_natal_info(self, client, saved_chart_id):
+        response = client.post(f"/api/v1/charts/{saved_chart_id}/transits")
+        data = response.json()
+        assert data["natal_chart_id"] == saved_chart_id
+        assert data["natal_name"] == "API Test"

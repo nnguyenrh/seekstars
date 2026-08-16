@@ -62,3 +62,32 @@ class BirthChart(BaseModel):
     summary: ChartSummary
 
     computed_at: datetime = Field(..., description="When this chart was computed")
+
+
+class TransitPosition(BaseModel):
+    planet: Planet
+    longitude: float = Field(..., description="Ecliptic longitude in degrees (0-360)")
+    latitude: float = Field(..., description="Ecliptic latitude in degrees")
+    speed: float = Field(..., description="Daily motion in degrees/day")
+    is_retrograde: bool = Field(..., description="Whether the planet is in retrograde motion")
+    sign: Sign = Field(..., description="Zodiac sign the planet occupies")
+    sign_degree: float = Field(..., description="Degree within the sign (0-30)")
+    sign_minute: int = Field(..., description="Arc-minute within the degree (0-59)")
+
+
+class TransitAspect(BaseModel):
+    transit_planet: Planet = Field(..., description="The transiting planet")
+    natal_planet: Planet = Field(..., description="The natal planet being aspected")
+    aspect_type: AspectType
+    exact_angle: float = Field(..., description="The exact angle between the two bodies")
+    orb: float = Field(..., description="How far from exact the aspect is (in degrees)")
+    is_applying: bool = Field(..., description="Whether the aspect is applying or separating")
+
+
+class TransitReport(BaseModel):
+    natal_chart_id: Optional[int] = Field(None, description="ID of the natal chart")
+    natal_name: Optional[str] = Field(None, description="Name from the natal chart")
+    transit_datetime: datetime = Field(..., description="Date/time for the transit calculation")
+    transit_positions: list[TransitPosition]
+    transit_aspects: list[TransitAspect]
+    computed_at: datetime = Field(..., description="When this report was computed")
