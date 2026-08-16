@@ -281,3 +281,57 @@ class TestSynastryCommand:
         result = runner.invoke(cli, ["synastry", str(sample_chart_in_db), "9999", "--quiet"])
         assert result.exit_code != 0
         assert "not found" in result.output
+
+    def test_synastry_save(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        result = runner.invoke(cli, [
+            "synastry", str(sample_chart_in_db), str(second_chart_in_db),
+            "--save", "--quiet",
+        ])
+        assert result.exit_code == 0
+
+        result = runner.invoke(cli, ["list-synastry"])
+        assert result.exit_code == 0
+        assert "Test Person" in result.output
+        assert "Second Person" in result.output
+
+
+class TestSynastryPersistenceCommands:
+    def _save_synastry(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        runner.invoke(cli, [
+            "synastry", str(sample_chart_in_db), str(second_chart_in_db),
+            "--save", "--quiet",
+        ])
+
+    def test_list_synastry_empty(self, runner, db_path):
+        result = runner.invoke(cli, ["list-synastry"])
+        assert result.exit_code == 0
+        assert "No synastry reports found" in result.output
+
+    def test_show_synastry(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        self._save_synastry(runner, db_path, sample_chart_in_db, second_chart_in_db)
+        result = runner.invoke(cli, ["show-synastry", "1"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "inter_aspects" in data
+
+    def test_show_synastry_markdown(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        self._save_synastry(runner, db_path, sample_chart_in_db, second_chart_in_db)
+        result = runner.invoke(cli, ["show-synastry", "1", "--format", "markdown"])
+        assert result.exit_code == 0
+        assert "## Inter-Chart Aspects" in result.output
+
+    def test_show_synastry_nonexistent(self, runner, db_path):
+        result = runner.invoke(cli, ["show-synastry", "9999"])
+        assert result.exit_code != 0
+
+    def test_delete_synastry(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        self._save_synastry(runner, db_path, sample_chart_in_db, second_chart_in_db)
+        result = runner.invoke(cli, ["delete-synastry", "1", "--yes"])
+        assert result.exit_code == 0
+        assert "deleted" in result.output
+
+    def test_delete_synastry_cancel(self, runner, db_path, sample_chart_in_db, second_chart_in_db):
+        self._save_synastry(runner, db_path, sample_chart_in_db, second_chart_in_db)
+        result = runner.invoke(cli, ["delete-synastry", "1"], input="n\n")
+        assert result.exit_code == 0
+        assert "Cancelled" in result.output

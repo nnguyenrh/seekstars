@@ -265,7 +265,7 @@ class TestSynastryEndpoint:
             "chart_a_id": saved_chart_id,
             "chart_b_id": second_chart_id,
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert "inter_aspects" in data
         assert "a_in_b_houses" in data
@@ -306,3 +306,61 @@ class TestSynastryEndpoint:
         }).json()
         assert len(data["a_in_b_houses"]) == 14
         assert len(data["b_in_a_houses"]) == 14
+
+    def test_synastry_saves_by_default(self, client, saved_chart_id, second_chart_id):
+        client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+        })
+        response = client.get("/api/v1/synastry")
+        assert response.status_code == 200
+        assert response.json()["total"] == 1
+
+    def test_synastry_no_save(self, client, saved_chart_id, second_chart_id):
+        client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+            "save": False,
+        })
+        response = client.get("/api/v1/synastry")
+        assert response.json()["total"] == 0
+
+
+class TestSynastryPersistenceEndpoints:
+    def _create_synastry(self, client, saved_chart_id, second_chart_id):
+        client.post("/api/v1/synastry", json={
+            "chart_a_id": saved_chart_id,
+            "chart_b_id": second_chart_id,
+        })
+
+    def test_list_synastries(self, client, saved_chart_id, second_chart_id):
+        self._create_synastry(client, saved_chart_id, second_chart_id)
+        response = client.get("/api/v1/synastry")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["reports"][0]["name_a"] == "API Test"
+        assert data["reports"][0]["name_b"] == "API Test B"
+
+    def test_get_synastry(self, client, saved_chart_id, second_chart_id):
+        self._create_synastry(client, saved_chart_id, second_chart_id)
+        response = client.get("/api/v1/synastry/1")
+        assert response.status_code == 200
+        data = response.json()
+        assert "inter_aspects" in data
+
+    def test_get_synastry_nonexistent(self, client):
+        response = client.get("/api/v1/synastry/9999")
+        assert response.status_code == 404
+
+    def test_delete_synastry(self, client, saved_chart_id, second_chart_id):
+        self._create_synastry(client, saved_chart_id, second_chart_id)
+        response = client.delete("/api/v1/synastry/1")
+        assert response.status_code == 204
+
+        response = client.get("/api/v1/synastry/1")
+        assert response.status_code == 404
+
+    def test_delete_synastry_nonexistent(self, client):
+        response = client.delete("/api/v1/synastry/9999")
+        assert response.status_code == 404

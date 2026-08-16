@@ -15,6 +15,7 @@ from starseek.formatters.json_fmt import to_json, transit_to_json, synastry_to_j
 from starseek.formatters.markdown_fmt import to_markdown, transit_to_markdown, synastry_to_markdown
 from starseek.services.storage import (
     init_db, save_chart, load_chart, list_charts, delete_chart,
+    save_synastry, load_synastry, list_synastries, delete_synastry,
     cache_location, get_cached_location,
 )
 from starseek.services.geocoding import (
@@ -348,9 +349,10 @@ def transits(ctx, chart_id, date_str, time_str, fmt, quiet):
 @click.argument("chart_id_b", type=int)
 @click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
               default="json", help="Output format.")
+@click.option("--save/--no-save", default=False, help="Save synastry report to database.")
 @click.option("--quiet", "-q", is_flag=True, help="Suppress non-data output.")
 @click.pass_context
-def synastry(ctx, chart_id_a, chart_id_b, fmt, quiet):
+def synastry(ctx, chart_id_a, chart_id_b, fmt, save, quiet):
     """Compare two saved charts (synastry)."""
     settings = ctx.obj["settings"]
     init_db(settings.db_path, admin_password=settings.admin_password)
@@ -371,6 +373,11 @@ def synastry(ctx, chart_id_a, chart_id_b, fmt, quiet):
         click.echo(f"Error calculating synastry: {e}", err=True)
         sys.exit(1)
 
+    if save:
+        report_id = save_synastry(settings.db_path, report)
+        if not quiet:
+            click.echo(f"Synastry report saved with ID {report_id}.", err=True)
+
     if not quiet:
         name_a = chart_a.name or f"Chart {chart_id_a}"
         name_b = chart_b.name or f"Chart {chart_id_b}"
@@ -380,6 +387,82 @@ def synastry(ctx, chart_id_a, chart_id_b, fmt, quiet):
         click.echo(synastry_to_markdown(report))
     else:
         click.echo(synastry_to_json(report))
+
+
+@cli.command("list-synastry")
+@click.option("--limit", "-l", default=20, help="Max results.")
+@click.option("--offset", "-o", default=0, help="Result offset.")
+@click.pass_context
+def list_synastry_cmd(ctx, limit, offset):
+    """List saved synastry reports."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    items, total = list_synastries(settings.db_path, limit=limit, offset=offset)
+
+    if total == 0:
+        click.echo("No synastry reports found.")
+        return
+
+    click.echo(f"Synastry Reports ({total} total):")
+    click.echo(f"{'ID':>4}  {'Person A':<20} {'Person B':<20} {'Chart A':>7} {'Chart B':>7}  {'Created':<20}")
+    click.echo("-" * 85)
+    for item in items:
+        name_a = item.name_a or "(unnamed)"
+        name_b = item.name_b or "(unnamed)"
+        click.echo(
+            f"{item.id:>4}  {name_a:<20} {name_b:<20} "
+            f"{item.chart_a_id:>7} {item.chart_b_id:>7}  {item.created_at:<20}"
+        )
+
+
+@cli.command("show-synastry")
+@click.argument("report_id", type=int)
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+              default="json", help="Output format.")
+@click.pass_context
+def show_synastry_cmd(ctx, report_id, fmt):
+    """Show a saved synastry report by ID."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    report = load_synastry(settings.db_path, report_id)
+    if report is None:
+        click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+        sys.exit(1)
+
+    if fmt == "markdown":
+        click.echo(synastry_to_markdown(report))
+    else:
+        click.echo(synastry_to_json(report))
+
+
+@cli.command("delete-synastry")
+@click.argument("report_id", type=int)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation.")
+@click.pass_context
+def delete_synastry_cmd(ctx, report_id, yes):
+    """Delete a saved synastry report by ID."""
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    if not yes:
+        report = load_synastry(settings.db_path, report_id)
+        if report is None:
+            click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+            sys.exit(1)
+        name_a = report.chart_a.name or "(unnamed)"
+        name_b = report.chart_b.name or "(unnamed)"
+        if not click.confirm(f"Delete synastry report {report_id} ({name_a} & {name_b})?"):
+            click.echo("Cancelled.")
+            return
+
+    deleted = delete_synastry(settings.db_path, report_id)
+    if deleted:
+        click.echo(f"Synastry report {report_id} deleted.")
+    else:
+        click.echo(f"Error: Synastry report {report_id} not found.", err=True)
+        sys.exit(1)
 
 
 def _resolve_city(city, db_path, username, quiet):
