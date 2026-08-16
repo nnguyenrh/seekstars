@@ -272,10 +272,13 @@ def list_cmd(ctx, name, limit, offset):
 
 @cli.command()
 @click.argument("chart_ref")
-@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown"], case_sensitive=False),
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "markdown", "svg"], case_sensitive=False),
               default="json", help="Output format.")
+@click.option("--output", "-o", "output_file", default=None, help="Save output to file (required for SVG).")
+@click.option("--theme", default="classic",
+              help="SVG theme (classic, dark, light, dark-high-contrast, strawberry, black-and-white).")
 @click.pass_context
-def show(ctx, chart_ref, fmt):
+def show(ctx, chart_ref, fmt, output_file, theme):
     """Show a saved chart by ID or name."""
     settings = ctx.obj["settings"]
     init_db(settings.db_path, admin_password=settings.admin_password)
@@ -285,10 +288,68 @@ def show(ctx, chart_ref, fmt):
         click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
         sys.exit(1)
 
-    if fmt == "markdown":
+    if fmt == "svg":
+        try:
+            from starseek_charts.svg import render_natal_svg
+        except ImportError:
+            click.echo("Error: starseek-charts is not installed. Run: pip install -e ./starseek-charts", err=True)
+            sys.exit(1)
+        svg = render_natal_svg(result, theme=theme)
+        if output_file:
+            with open(output_file, "w") as f:
+                f.write(svg)
+            click.echo(f"SVG saved to {output_file}", err=True)
+        else:
+            click.echo(svg)
+    elif fmt == "markdown":
         click.echo(to_markdown(result))
     else:
         click.echo(to_json(result))
+
+
+@cli.command()
+@click.argument("chart_ref")
+@click.argument("chart_ref_b", required=False, default=None)
+@click.option("--type", "-t", "chart_type", type=click.Choice(["natal", "synastry", "transit"], case_sensitive=False),
+              default=None, help="Chart type (auto-detected if second chart provided).")
+@click.option("--output", "-o", "output_file", default=None, help="Output file path (default: stdout).")
+@click.option("--theme", default="classic",
+              help="SVG theme (classic, dark, light, dark-high-contrast, strawberry, black-and-white).")
+@click.pass_context
+def render(ctx, chart_ref, chart_ref_b, chart_type, output_file, theme):
+    """Render a chart wheel as SVG."""
+    try:
+        from starseek_charts.svg import render_svg
+    except ImportError:
+        click.echo("Error: starseek-charts is not installed. Run: pip install -e ./starseek-charts", err=True)
+        sys.exit(1)
+
+    settings = ctx.obj["settings"]
+    init_db(settings.db_path, admin_password=settings.admin_password)
+
+    chart_a = resolve_chart(settings.db_path, chart_ref)
+    if chart_a is None:
+        click.echo(f"Error: Chart '{chart_ref}' not found.", err=True)
+        sys.exit(1)
+
+    chart_b = None
+    if chart_ref_b:
+        chart_b = resolve_chart(settings.db_path, chart_ref_b)
+        if chart_b is None:
+            click.echo(f"Error: Chart '{chart_ref_b}' not found.", err=True)
+            sys.exit(1)
+
+    if chart_type is None:
+        chart_type = "synastry" if chart_b else "natal"
+
+    svg = render_svg(chart_a, chart_b, chart_type=chart_type, theme=theme)
+
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(svg)
+        click.echo(f"SVG saved to {output_file}", err=True)
+    else:
+        click.echo(svg)
 
 
 @cli.command()
