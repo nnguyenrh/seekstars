@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starseek-charts"
+version = "0.3.0"
+description = "SVG and raster chart rendering for StarSeek (wraps Kerykeion)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "starseek-core>=0.3.0",
+    "kerykeion>=4.0",
+]
+
+[project.optional-dependencies]
+raster = [
+    "cairosvg>=2.5",
+]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["starseek_charts*"]
