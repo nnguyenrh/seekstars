@@ -39,3 +39,7 @@ backups/
 # Crush local data
 .crush/
 .crushrc
+
+# Interpretation source material (copyrighted books, personal use only)
+starseek-core/interpretations/sources/
+starseek-core/interpretations/converted/

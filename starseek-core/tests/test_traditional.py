@@ -13,16 +13,20 @@ from starseek.core.traditional import (
 
 class TestSectDetermination:
     def test_diurnal_chart(self):
-        assert determine_sect(sun_longitude=90.0, asc_longitude=0.0) == "diurnal"
+        # Sun at 270, ASC at 0: diff=270, Sun is above horizon (houses 7-12) -> diurnal
+        assert determine_sect(sun_longitude=270.0, asc_longitude=0.0) == "diurnal"
 
     def test_nocturnal_chart(self):
-        assert determine_sect(sun_longitude=270.0, asc_longitude=0.0) == "nocturnal"
+        # Sun at 90, ASC at 0: diff=90, Sun is below horizon (houses 1-6) -> nocturnal
+        assert determine_sect(sun_longitude=90.0, asc_longitude=0.0) == "nocturnal"
 
     def test_sun_just_above_horizon(self):
-        assert determine_sect(sun_longitude=10.0, asc_longitude=5.0) == "diurnal"
+        # Sun at 195, ASC at 5: diff=190, just above horizon -> diurnal
+        assert determine_sect(sun_longitude=195.0, asc_longitude=5.0) == "diurnal"
 
     def test_sun_just_below_horizon(self):
-        assert determine_sect(sun_longitude=350.0, asc_longitude=5.0) == "nocturnal"
+        # Sun at 15, ASC at 5: diff=10, just below horizon -> nocturnal
+        assert determine_sect(sun_longitude=15.0, asc_longitude=5.0) == "nocturnal"
 
     def test_chart_has_sect_field(self):
         bd = BirthData(

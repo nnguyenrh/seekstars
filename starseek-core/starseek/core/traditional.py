@@ -34,7 +34,7 @@ SECT_RELEVANT = (
 
 def determine_sect(sun_longitude: float, asc_longitude: float) -> str:
     diff = (sun_longitude - asc_longitude) % 360
-    if diff < 180:
+    if diff >= 180:
         return "diurnal"
     return "nocturnal"
 
